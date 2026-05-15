@@ -1,556 +1,900 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PromptForge – Generador de Prompts en Markdown</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-    background: #F4F2EE;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-  @keyframes fadeIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
-  @keyframes spin   { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PromptForge — Generador de Prompts Offline</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-  /* ── HEADER ── */
-  header {
-    background: #0A1E1C;
-    padding: 0 24px;
-    height: 58px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-  }
-  .logo-wrap { display:flex; align-items:center; gap:12px; }
-  .logo-icon {
-    width:34px; height:34px; border-radius:8px;
-    background:#1D9E75; display:flex; align-items:center;
-    justify-content:center; font-size:17px;
-  }
-  .logo-title { color:#E1F5EE; font-size:17px; font-weight:700; font-family:Georgia,serif; letter-spacing:-0.5px; line-height:1.2; }
-  .logo-sub   { color:#5DCAA5; font-size:11px; }
-  .badge      { background:#1D2B2A; color:#5DCAA5; font-size:11px; padding:4px 12px; border-radius:20px; border:1px solid #2C4A47; }
+    :root {
+      --bg:        #F4F2EE;
+      --bg-panel:  #F8F7F4;
+      --white:     #ffffff;
+      --border:    #D3D1C7;
+      --border-lt: #E8E6E0;
+      --bg-ref:    #F1EFE8;
+      --green-dk:  #085041;
+      --green-md:  #0F6E56;
+      --green:     #1D9E75;
+      --green-lt:  #E1F5EE;
+      --green-pal: #A8DCC8;
+      --green-bg:  #E8F5F0;
+      --teal-dk:   #0A1E1C;
+      --teal-md:   #1D2B2A;
+      --teal-brdr: #2C4A47;
+      --teal-text: #9FE1CB;
+      --teal-sub:  #5DCAA5;
+      --text:      #2C2C2A;
+      --text-md:   #444441;
+      --text-lt:   #5F5E5A;
+      --muted:     #888780;
+      --muted-lt:  #B4B2A9;
+      --red:       #A32D2D;
+      --red-lt:    #F09595;
+      --red-bg:    #FCEBEB;
+      --editor-bg: #0E1E1C;
+    }
 
-  /* ── TOAST ── */
-  #toast {
-    display:none; position:fixed; top:16px; right:16px; z-index:9999;
-    background:#085041; color:#9FE1CB; padding:10px 18px;
-    border-radius:10px; font-size:13px; font-weight:500;
-    box-shadow:0 4px 20px rgba(0,0,0,.2); animation:fadeIn .2s ease;
-  }
+    html, body { height: 100%; overflow: hidden; }
 
-  /* ── MAIN GRID ── */
-  .grid {
-    flex:1; display:grid;
-    grid-template-columns: 420px 1fr;
-    min-height: 0;
-  }
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
 
-  /* ── LEFT PANEL ── */
-  .left {
-    background:#fff;
-    border-right:1.5px solid #D3D1C7;
-    display:flex; flex-direction:column;
-    overflow-y:auto;
-  }
-  .section { padding:20px 20px 16px; }
-  .label-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
-  .label { font-size:11px; font-weight:700; color:#888780; text-transform:uppercase; letter-spacing:.8px; }
-  .char-count { font-size:11px; color:#B4B2A9; }
-  textarea {
-    width:100%; padding:12px 14px; border-radius:9px;
-    border:1.5px solid #D3D1C7; font-family:system-ui,sans-serif;
-    font-size:13.5px; line-height:1.65; resize:vertical;
-    outline:none; background:#FAFAF8; color:#2C2C2A; transition:border-color .2s;
-  }
-  textarea:focus { border-color:#1D9E75; }
-  textarea::placeholder { color:#888780; }
-  .hint { font-size:11px; color:#B4B2A9; margin-top:5px; }
-  .btn-row { padding:0 20px 16px; display:flex; gap:8px; }
-  .btn-primary {
-    flex:1; padding:11px 18px; border-radius:9px; border:none;
-    cursor:pointer; font-size:14px; font-weight:600;
-    background:#0F6E56; color:#fff; transition:all .2s;
-    display:flex; align-items:center; justify-content:center; gap:7px;
-  }
-  .btn-primary:disabled { background:#B4B2A9; cursor:not-allowed; opacity:.7; }
-  .btn-primary:not(:disabled):hover { background:#085041; }
-  .btn-secondary {
-    padding:9px 14px; border-radius:8px; border:1.5px solid #D3D1C7;
-    cursor:pointer; font-size:13px; font-weight:500;
-    background:#fff; color:#444441; transition:all .2s;
-    display:flex; align-items:center; gap:6px;
-  }
-  .btn-secondary:disabled { opacity:.5; cursor:not-allowed; }
-  .btn-secondary:not(:disabled):hover { border-color:#1D9E75; background:#E1F5EE; color:#0F6E56; }
-  .error-box {
-    margin:0 20px 14px; padding:10px 14px;
-    background:#FCEBEB; border:1px solid #F09595;
-    border-radius:8px; font-size:12px; color:#A32D2D; word-break:break-word;
-  }
-  .divider { height:1px; background:#F1EFE8; margin:0 20px; }
-  .templates-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
-  .tpl-btn {
-    padding:11px 12px; border-radius:9px; border:1.5px solid #E8E6E0;
-    background:#FAFAF8; cursor:pointer; text-align:left; transition:all .15s;
-  }
-  .tpl-btn:hover { border-color:#1D9E75; background:#E1F5EE; transform:translateY(-1px); }
-  .tpl-icon { font-size:18px; margin-bottom:4px; }
-  .tpl-name { font-size:12px; font-weight:600; color:#2C2C2A; margin-bottom:2px; }
-  .tpl-desc { font-size:11px; color:#888780; }
-  .struct-box { background:#F1EFE8; border-radius:9px; padding:12px 14px; margin-top:0; }
-  .struct-item { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
-  .dot { width:6px; height:6px; border-radius:50%; background:#1D9E75; flex-shrink:0; }
-  .struct-item code { font-size:11px; color:#444441; font-family:'Courier New',monospace; }
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted-lt); }
 
-  /* ── RIGHT PANEL ── */
-  .right { display:flex; flex-direction:column; background:#F8F7F4; }
-  .toolbar {
-    background:#fff; border-bottom:1.5px solid #D3D1C7;
-    padding:10px 20px; display:flex; align-items:center; justify-content:space-between;
-  }
-  .tab-group { display:flex; gap:4px; background:#F1EFE8; padding:3px; border-radius:8px; }
-  .tab-btn {
-    padding:6px 14px; border-radius:6px; border:none; cursor:pointer;
-    font-size:13px; font-weight:500; transition:all .15s;
-    background:transparent; color:#888780;
-  }
-  .tab-btn.active { background:#fff; color:#0F6E56; box-shadow:0 1px 4px rgba(0,0,0,.1); }
-  .stats { display:flex; gap:14px; font-size:12px; color:#888780; }
-  .stat-dot { width:8px; height:8px; border-radius:50%; background:#1D9E75; display:inline-block; margin-right:4px; }
-  .editor-wrap { flex:1; padding:20px; min-height:0; }
-  #md-editor {
-    width:100%; height:calc(100vh - 280px); min-height:400px;
-    padding:16px 18px; border-radius:10px; border:1.5px solid #2C4A47;
-    font-family:'Courier New',Courier,monospace; font-size:13.5px;
-    line-height:1.75; resize:none; outline:none;
-    background:#0E1E1C; color:#9FE1CB; caret-color:#1D9E75;
-  }
-  #md-editor:focus { border-color:#1D9E75; }
-  #generating-badge {
-    display:none; position:absolute; top:14px; right:14px;
-    background:#1D9E75; color:#fff; font-size:11px;
-    padding:4px 10px; border-radius:6px; font-weight:600;
-  }
-  #preview-panel {
-    display:none; background:#fff; border-radius:10px;
-    border:1.5px solid #D3D1C7; padding:24px 28px;
-    height:calc(100vh - 280px); min-height:400px;
-    overflow-y:auto;
-  }
-  .empty-state {
-    display:flex; align-items:center; justify-content:center;
-    height:100%; flex-direction:column; gap:10px; color:#B4B2A9;
-  }
-  .empty-icon { font-size:40px; }
+    /* ── Animations ── */
+    @keyframes fadeDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
+    @keyframes spin     { to { transform: rotate(360deg); } }
+    @keyframes pulse    { 0%,100%{opacity:1} 50%{opacity:.5} }
 
-  /* ── EXPORT BAR ── */
-  .export-bar {
-    background:#fff; border-top:1.5px solid #D3D1C7;
-    padding:12px 20px; display:flex; align-items:center; gap:8px;
-  }
-  .export-label { font-size:11px; font-weight:700; color:#888780; text-transform:uppercase; letter-spacing:.8px; margin-right:4px; }
-  .vbar { width:1px; height:24px; background:#E8E6E0; margin:0 4px; }
-  #btn-clear { margin-left:auto; color:#A32D2D !important; border-color:#F09595 !important; }
+    /* ── Toast ── */
+    #toast {
+      display: none;
+      position: fixed; top: 16px; right: 16px; z-index: 9999;
+      background: var(--green-dk); color: var(--teal-text);
+      padding: 10px 18px; border-radius: 10px;
+      font-size: 13px; font-weight: 500;
+      box-shadow: 0 4px 20px rgba(0,0,0,.25);
+      animation: fadeDown .2s ease;
+    }
 
-  /* ── SPINNER ── */
-  .spinner {
-    width:14px; height:14px; border:2px solid rgba(255,255,255,.2);
-    border-top-color:#fff; border-radius:50%;
-    display:inline-block; animation:spin .7s linear infinite; flex-shrink:0;
-  }
-  .spinner.dark { border-color:rgba(15,110,86,.2); border-top-color:#0F6E56; }
+    /* ── HEADER ── */
+    header {
+      background: var(--teal-dk);
+      height: 58px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px;
+    }
+    .logo { display:flex; align-items:center; gap:12px; }
+    .logo-icon {
+      width:34px; height:34px; border-radius:8px;
+      background:var(--green); display:flex; align-items:center; justify-content:center; font-size:17px;
+    }
+    .logo-title { color:#E1F5EE; font-size:17px; font-weight:700; font-family:Georgia,serif; letter-spacing:-.5px; line-height:1.2; }
+    .logo-sub   { color:var(--teal-sub); font-size:11px; }
+    .header-right { display:flex; gap:8px; align-items:center; }
+    .badge-local {
+      background:var(--teal-md); color:var(--teal-sub);
+      font-size:11px; padding:4px 12px; border-radius:20px;
+      border:1px solid var(--teal-brdr);
+      display:flex; align-items:center; gap:5px;
+    }
+    .badge-dot { width:7px; height:7px; border-radius:50%; background:var(--green); }
+    #historyToggle {
+      padding:6px 12px; border-radius:8px; border:1px solid var(--teal-brdr);
+      background:var(--teal-md); color:var(--teal-text);
+      cursor:pointer; font-size:12px; font-weight:500; display:none;
+    }
 
-  /* ── PREVIEW STYLES ── */
-  #preview-panel h1 {
-    font-size:17px; font-weight:700; color:#085041;
-    font-family:Georgia,serif; letter-spacing:-.3px;
-    margin:24px 0 0;
-  }
-  #preview-panel h1:first-child { margin-top:0; }
-  .h1-under { height:2px; background:linear-gradient(90deg,#1D9E75,transparent); margin:6px 0 10px; border-radius:2px; }
-  #preview-panel h2 { font-size:15px; font-weight:600; color:#0F6E56; margin:16px 0 6px; font-family:Georgia,serif; }
-  #preview-panel h3 { font-size:14px; font-weight:600; color:#1D9E75; margin:12px 0 4px; }
-  #preview-panel p  { font-size:14px; color:#444441; margin:4px 0; line-height:1.65; }
-  #preview-panel ul { padding-left:22px; margin:6px 0 12px; list-style:none; }
-  #preview-panel li { display:flex; gap:8px; margin-bottom:5px; font-size:14px; color:#444441; line-height:1.6; }
-  #preview-panel li::before { content:"▸"; color:#1D9E75; font-weight:700; flex-shrink:0; }
-  #preview-panel blockquote { border-left:3px solid #1D9E75; padding-left:14px; margin:8px 0; color:#5F5E5A; font-style:italic; font-size:13px; }
+    /* ── HISTORY PANEL ── */
+    #historyPanel {
+      display:none; background:var(--white); border-bottom:1.5px solid var(--border);
+      padding:14px 24px; flex-shrink:0;
+    }
+    .history-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:10px; }
+    #historyScroll { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
+    .history-card {
+      flex-shrink:0; padding:8px 12px; border-radius:8px;
+      border:1.5px solid var(--border); background:#F8F7F4;
+      cursor:pointer; text-align:left; max-width:200px;
+      transition:border-color .15s, background .15s;
+    }
+    .history-card:hover { border-color:var(--green); background:var(--green-lt); }
+    .history-date  { font-size:11px; color:var(--muted); margin-bottom:3px; }
+    .history-prev  { font-size:12px; color:var(--text); line-height:1.4;
+      overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
 
-  /* ── RESPONSIVE ── */
-  @media (max-width: 800px) {
-    .grid { grid-template-columns: 1fr; }
-    .left { border-right:none; border-bottom:1.5px solid #D3D1C7; }
-  }
+    /* ── MAIN GRID ── */
+    #main {
+      flex:1; display:grid; grid-template-columns:420px 1fr; min-height:0; overflow:hidden;
+    }
 
-  ::-webkit-scrollbar { width:6px; height:6px; }
-  ::-webkit-scrollbar-track { background:transparent; }
-  ::-webkit-scrollbar-thumb { background:#D3D1C7; border-radius:3px; }
-  ::-webkit-scrollbar-thumb:hover { background:#B4B2A9; }
-</style>
+    /* ── LEFT PANEL ── */
+    #left {
+      background:var(--white); border-right:1.5px solid var(--border);
+      display:flex; flex-direction:column; overflow-y:auto;
+    }
+
+    /* Input section */
+    .section-pad { padding:20px 20px 16px; }
+    .input-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+    .label-sm { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; }
+    .char-count { font-size:11px; color:var(--muted-lt); }
+
+    #userInput {
+      width:100%; min-height:160px; padding:12px 14px;
+      border-radius:9px; border:1.5px solid var(--border);
+      font-family:system-ui,sans-serif; font-size:13.5px; line-height:1.65;
+      resize:vertical; outline:none; background:#FAFAF8; color:var(--text);
+      transition:border-color .2s;
+    }
+    #userInput:focus { border-color:var(--green); }
+    #userInput::placeholder { color:var(--muted); }
+    .hint { font-size:11px; color:var(--muted-lt); margin-top:5px; }
+
+    /* Buttons */
+    .btn-row { padding:0 20px 16px; display:flex; gap:8px; }
+    .btn-primary {
+      flex:1; padding:11px 18px; border-radius:9px; border:none;
+      cursor:pointer; font-size:14px; font-weight:600;
+      background:var(--green-md); color:#fff;
+      display:flex; align-items:center; justify-content:center; gap:7px;
+      transition:background .2s, opacity .2s;
+    }
+    .btn-primary:disabled { background:var(--muted-lt); cursor:not-allowed; opacity:.7; }
+    .btn-primary:not(:disabled):hover { background:var(--green-dk); }
+    .btn-secondary {
+      padding:9px 13px; border-radius:8px;
+      border:1.5px solid var(--border);
+      cursor:pointer; font-size:13px; font-weight:500;
+      background:var(--white); color:var(--text-md);
+      display:flex; align-items:center; gap:6px;
+      transition:all .15s;
+    }
+    .btn-secondary:disabled { cursor:not-allowed; opacity:.5; }
+    .btn-secondary:not(:disabled):hover { border-color:var(--green); background:var(--green-lt); color:var(--green-md); }
+    .btn-danger {
+      padding:9px 13px; border-radius:8px;
+      border:1.5px solid var(--red-lt);
+      cursor:pointer; font-size:13px; font-weight:500;
+      background:var(--white); color:var(--red);
+      display:flex; align-items:center; gap:6px;
+      transition:all .15s; margin-left:auto;
+    }
+    .btn-danger:hover { background:var(--red-bg); }
+
+    /* Offline badge */
+    .offline-banner {
+      margin:0 20px 14px;
+      padding:10px 14px; background:var(--green-bg);
+      border:1px solid var(--green-pal); border-radius:8px;
+      font-size:12px; color:#0A5540;
+      display:flex; gap:8px; align-items:flex-start;
+    }
+
+    /* Divider */
+    .divider { height:1px; background:var(--bg-ref); margin:0 20px; }
+
+    /* Templates */
+    .templates-section { padding:16px 20px; }
+    .template-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .template-card {
+      padding:11px 12px; border-radius:9px;
+      border:1.5px solid var(--border-lt); background:#FAFAF8;
+      cursor:pointer; text-align:left;
+      transition:border-color .15s, background .15s, transform .15s;
+    }
+    .template-card:hover { border-color:var(--green); background:var(--green-lt); transform:translateY(-1px); }
+    .tmpl-icon { font-size:18px; margin-bottom:4px; }
+    .tmpl-name { font-size:12px; font-weight:600; color:var(--text); margin-bottom:2px; }
+    .tmpl-desc { font-size:11px; color:var(--muted); }
+
+    /* Structure reference */
+    .struct-box {
+      margin:0 20px 20px;
+      background:var(--bg-ref); border-radius:9px; padding:12px 14px;
+    }
+    .struct-item { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
+    .struct-dot  { width:6px; height:6px; border-radius:50%; background:var(--green); flex-shrink:0; }
+    .struct-code { font-size:11px; color:var(--text-md); font-family:'Courier New',monospace; }
+    .struct-note { font-size:11px; color:var(--muted); margin-top:6px; }
+
+    /* ── RIGHT PANEL ── */
+    #right { display:flex; flex-direction:column; background:var(--bg-panel); }
+
+    /* Toolbar */
+    #toolbar {
+      background:var(--white); border-bottom:1.5px solid var(--border);
+      padding:10px 20px; display:flex; align-items:center; justify-content:space-between;
+      flex-shrink:0;
+    }
+    .tab-group { display:flex; gap:4px; background:var(--bg-ref); padding:3px; border-radius:8px; }
+    .tab-btn {
+      padding:6px 14px; border-radius:6px; border:none; cursor:pointer;
+      font-size:13px; font-weight:500; transition:all .15s;
+      background:transparent; color:var(--muted);
+    }
+    .tab-btn.active { background:var(--white); color:var(--green-md); box-shadow:0 1px 4px rgba(0,0,0,.1); }
+    #statsBar { display:flex; gap:14px; font-size:12px; color:var(--muted); }
+    .stat-dot { width:8px; height:8px; border-radius:50%; background:var(--green); display:inline-block; margin-right:4px; }
+
+    /* Editor / Preview */
+    #editorWrap { flex:1; padding:20px; min-height:0; position:relative; }
+
+    #mdEditor {
+      width:100%; height:calc(100vh - 280px); min-height:400px;
+      padding:16px 18px; border-radius:10px;
+      border:1.5px solid var(--teal-brdr);
+      font-family:'Courier New',Courier,monospace;
+      font-size:13.5px; line-height:1.75; resize:none; outline:none;
+      background:var(--editor-bg); color:var(--teal-text);
+      caret-color:var(--green); transition:border-color .2s;
+    }
+    #mdEditor:focus  { border-color:var(--green); }
+    #mdEditor::placeholder { color:#3a5e58; }
+
+    #generatingBadge {
+      display:none; position:absolute; top:34px; right:34px;
+      background:var(--green); color:#fff;
+      font-size:11px; padding:4px 10px; border-radius:6px; font-weight:600;
+      animation:pulse 1s ease infinite;
+    }
+
+    #previewPane {
+      display:none;
+      background:var(--white); border-radius:10px; border:1.5px solid var(--border);
+      padding:24px 28px; height:calc(100vh - 280px); min-height:400px;
+      overflow-y:auto;
+    }
+
+    /* Preview rendered Markdown */
+    .md-h1 { font-size:17px; font-weight:700; color:var(--green-dk); font-family:Georgia,serif; letter-spacing:-.3px; margin:0; }
+    .md-h1-wrap { margin-top:24px; margin-bottom:10px; }
+    .md-h1-wrap:first-child { margin-top:0; }
+    .md-h1-line { height:2px; background:linear-gradient(90deg,var(--green) 0%,transparent 100%); margin-top:6px; border-radius:2px; }
+    .md-h2 { font-size:15px; font-weight:600; color:var(--green-md); margin:16px 0 6px; font-family:Georgia,serif; }
+    .md-h3 { font-size:14px; font-weight:600; color:var(--green); margin:12px 0 4px; }
+    .md-ul { padding-left:22px; margin:6px 0 12px; list-style:none; }
+    .md-li { display:flex; gap:8px; margin-bottom:5px; font-size:14px; color:var(--text-md); line-height:1.6; }
+    .md-li-bullet { color:var(--green); font-weight:700; margin-top:1px; flex-shrink:0; }
+    .md-p  { font-size:14px; color:var(--text-md); margin:4px 0; line-height:1.65; }
+    .md-bq { border-left:3px solid var(--green); padding-left:14px; margin:8px 0; color:var(--text-lt); font-style:italic; font-size:13px; }
+    .md-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:10px; color:var(--muted-lt); }
+
+    /* Export bar */
+    #exportBar {
+      background:var(--white); border-top:1.5px solid var(--border);
+      padding:12px 20px; display:flex; align-items:center; gap:8px; flex-shrink:0;
+    }
+    .export-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-right:4px; }
+    .sep { width:1px; height:24px; background:var(--border-lt); margin:0 4px; }
+
+    /* Spinner */
+    .spinner {
+      width:14px; height:14px; border-radius:50%; display:inline-block; flex-shrink:0;
+      border:2px solid rgba(255,255,255,.2); border-top-color:#fff;
+      animation:spin .7s linear infinite;
+    }
+    .spinner.dark { border-color:rgba(15,110,86,.2); border-top-color:var(--green-md); }
+  </style>
 </head>
 <body>
 
+<!-- Toast -->
 <div id="toast"></div>
 
 <!-- HEADER -->
 <header>
-  <div class="logo-wrap">
+  <div class="logo">
     <div class="logo-icon">🔮</div>
     <div>
       <div class="logo-title">PromptForge</div>
       <div class="logo-sub">Generador de Prompts en Markdown</div>
     </div>
   </div>
-  <span class="badge">Powered by Claude</span>
+  <div class="header-right">
+    <button id="historyToggle" onclick="toggleHistory()">🕐 Historial (<span id="histCount">0</span>)</button>
+    <div class="badge-local"><div class="badge-dot"></div> 100% Local</div>
+  </div>
 </header>
 
-<!-- GRID -->
-<div class="grid">
+<!-- HISTORY PANEL -->
+<div id="historyPanel">
+  <div class="history-label">Prompts anteriores</div>
+  <div id="historyScroll"></div>
+</div>
 
-  <!-- LEFT PANEL -->
-  <div class="left">
-    <div class="section">
-      <div class="label-row">
-        <span class="label">Descripción libre</span>
-        <span class="char-count" id="char-count">0 caracteres</span>
+<!-- MAIN -->
+<div id="main">
+
+  <!-- LEFT -->
+  <div id="left">
+
+    <!-- Input -->
+    <div class="section-pad">
+      <div class="input-header">
+        <span class="label-sm">Descripción libre</span>
+        <span class="char-count" id="charCount">0 caracteres</span>
       </div>
-      <textarea id="user-input" rows="8"
-        placeholder="Describe en lenguaje natural el comportamiento deseado de tu asistente IA
-
-Ejemplo: Quiero un asistente experto en bibliometría que analice referencias APA 7, detecte DOI y exporte resultados a Excel..."></textarea>
-      <div class="hint">Ctrl+Enter para generar</div>
+      <textarea id="userInput"
+        placeholder="Describe en lenguaje natural el comportamiento deseado de tu asistente IA&#10;&#10;Ejemplo: Quiero un asistente experto en bibliometría que analice referencias APA 7, detecte DOI y exporte resultados a Excel..."
+        oninput="onInputChange()"
+        onkeydown="handleKey(event)"
+      ></textarea>
+      <div class="hint">Ctrl+Enter para generar · Sin conexión requerida</div>
     </div>
 
+    <!-- Actions -->
     <div class="btn-row">
-      <button class="btn-primary" id="btn-generate" disabled>⚡ Generar Prompt</button>
-      <button class="btn-secondary" id="btn-optimize" disabled>✨ Optimizar</button>
+      <button class="btn-primary" id="btnGenerate" onclick="generate()" disabled>
+        ⚡ Generar Prompt
+      </button>
+      <button class="btn-secondary" id="btnOptimize" onclick="optimize()" disabled title="Enriquecer el prompt con secciones adicionales">
+        ✨ Optimizar
+      </button>
     </div>
 
-    <div class="error-box" id="error-box" style="display:none"></div>
+    <!-- Error -->
+    <div id="errorBox" style="display:none;margin:0 20px 14px;padding:10px 14px;background:var(--red-bg);border:1px solid var(--red-lt);border-radius:8px;font-size:13px;color:var(--red);"></div>
+
+    <!-- Offline banner -->
+    <div class="offline-banner">
+      <span style="font-size:14px">🔒</span>
+      <span>Modo <strong>100% local</strong>. No se envían datos a servidores externos. No requiere API Key ni conexión a internet.</span>
+    </div>
 
     <div class="divider"></div>
 
-    <div class="section">
-      <div class="label">Plantillas rápidas</div>
-      <div class="templates-grid" id="templates-grid"></div>
+    <!-- Templates -->
+    <div class="templates-section">
+      <div class="label-sm" style="margin-bottom:12px">Plantillas rápidas</div>
+      <div class="template-grid" id="templateGrid"></div>
     </div>
 
-    <div style="padding:0 20px 20px">
-      <div class="struct-box">
-        <div class="label" style="margin-bottom:8px">Estructura generada</div>
-        <div class="struct-item"><span class="dot"></span><code># Rol del Asistente</code></div>
-        <div class="struct-item"><span class="dot"></span><code># Objetivos</code></div>
-        <div class="struct-item"><span class="dot"></span><code># Reglas</code></div>
-        <div class="struct-item"><span class="dot"></span><code># Restricciones</code></div>
-        <div class="struct-item"><span class="dot"></span><code># Formato de Salida</code></div>
-        <div style="font-size:11px;color:#888780;margin-top:6px">+ secciones adicionales según el contexto</div>
-      </div>
+    <!-- Structure -->
+    <div class="struct-box">
+      <div class="label-sm" style="margin-bottom:8px">Estructura generada</div>
+      <div id="structList"></div>
+      <div class="struct-note">+ secciones adicionales según el contexto</div>
     </div>
-  </div>
 
-  <!-- RIGHT PANEL -->
-  <div class="right">
-    <div class="toolbar">
+  </div><!-- /left -->
+
+  <!-- RIGHT -->
+  <div id="right">
+
+    <!-- Toolbar -->
+    <div id="toolbar">
       <div class="tab-group">
-        <button class="tab-btn active" id="tab-editor" onclick="switchTab('editor')">✏️ Editor</button>
-        <button class="tab-btn" id="tab-preview" onclick="switchTab('preview')">👁 Vista Previa</button>
+        <button class="tab-btn active" id="tab-editor"  onclick="switchTab('editor')">✏️ Editor</button>
+        <button class="tab-btn"        id="tab-preview" onclick="switchTab('preview')">👁 Vista Previa</button>
       </div>
-      <div class="stats" id="stats" style="display:none">
-        <span><span class="stat-dot"></span><span id="stat-sections">0</span> secciones</span>
-        <span id="stat-words">0 palabras</span>
-        <span id="stat-chars">0 chars</span>
+      <div id="statsBar" style="display:none">
+        <span><span class="stat-dot"></span><span id="statSections">0</span> secciones</span>
+        <span id="statWords">0</span> palabras
+        <span id="statChars">0</span> chars
       </div>
     </div>
 
-    <div class="editor-wrap" style="position:relative">
-      <textarea id="md-editor"
-        placeholder="El prompt Markdown aparecerá aquí.
+    <!-- Editor wrap -->
+    <div id="editorWrap">
+      <textarea id="mdEditor"
+        placeholder="El prompt Markdown aparecerá aquí.&#10;&#10;Escribe una descripción en el panel izquierdo y haz clic en ⚡ Generar Prompt&#10;&#10;También puedes escribir directamente aquí para editar manualmente."
+        oninput="onMdChange()"
+        spellcheck="false"
+      ></textarea>
+      <div id="generatingBadge">Generando…</div>
 
-Escribe una descripción en el panel izquierdo y haz clic en ⚡ Generar Prompt
-
-También puedes escribir directamente aquí para editar manualmente."></textarea>
-      <div id="generating-badge">Generando…</div>
-
-      <div id="preview-panel">
-        <div class="empty-state" id="empty-state">
-          <div class="empty-icon">📄</div>
-          <p style="font-size:14px;font-weight:500;color:#888780">Sin contenido para previsualizar</p>
-          <p style="font-size:12px;color:#B4B2A9">Genera un prompt primero</p>
+      <!-- Preview pane (inside same wrap so height matches) -->
+      <div id="previewPane">
+        <div class="md-empty" id="emptyState">
+          <div style="font-size:40px">📄</div>
+          <p style="font-size:14px;font-weight:500;color:var(--muted)">Sin contenido para previsualizar</p>
+          <p style="font-size:12px;color:var(--muted-lt)">Genera un prompt primero</p>
         </div>
-        <div id="preview-content"></div>
+        <div id="previewContent"></div>
       </div>
     </div>
 
-    <div class="export-bar">
+    <!-- Export bar -->
+    <div id="exportBar">
       <span class="export-label">Exportar:</span>
-      <button class="btn-secondary" id="btn-md"  disabled onclick="download('md','text/markdown')">⬇ .md</button>
-      <button class="btn-secondary" id="btn-txt" disabled onclick="download('txt','text/plain')">⬇ .txt</button>
-      <button class="btn-secondary" id="btn-pdf" disabled onclick="printPDF()">🖨 PDF</button>
-      <div class="vbar"></div>
-      <button class="btn-secondary" id="btn-copy" disabled onclick="copyMd()">📋 Copiar</button>
-      <button class="btn-secondary" id="btn-clear" style="display:none" onclick="clearAll()">🗑 Limpiar</button>
+      <button class="btn-secondary" id="btnMd"  onclick="downloadFile('md','text/markdown')"  disabled>⬇ .md</button>
+      <button class="btn-secondary" id="btnTxt" onclick="downloadFile('txt','text/plain')"    disabled>⬇ .txt</button>
+      <button class="btn-secondary" id="btnPdf" onclick="printPDF()"                          disabled>🖨 PDF</button>
+      <div class="sep"></div>
+      <button class="btn-secondary" id="btnCopy" onclick="copyMd()" disabled>📋 Copiar</button>
+      <button class="btn-danger"    id="btnClear" onclick="clearAll()" style="display:none">🗑 Limpiar</button>
     </div>
-  </div>
-</div>
+
+  </div><!-- /right -->
+</div><!-- /main -->
 
 <script>
-// ── TEMPLATES ──
+// ═══════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════
 const TEMPLATES = [
-  { icon:"📚", name:"Asistente Académico", desc:"Análisis e investigación", input:"Quiero un asistente experto en investigación académica que analice artículos científicos, identifique metodologías, evalúe la calidad de las fuentes y genere resúmenes estructurados siguiendo normas APA 7. Debe distinguir entre fuentes primarias y secundarias y detectar posibles sesgos." },
-  { icon:"📊", name:"Analista de Datos",   desc:"Estadística y visualización", input:"Necesito un asistente especialista en análisis de datos que interprete datasets en CSV y Excel, detecte patrones estadísticos, proponga visualizaciones adecuadas, genere código en Python o R y explique los resultados de forma accesible a audiencias no técnicas." },
-  { icon:"🎓", name:"Tutor Educativo",     desc:"Pedagogía adaptativa", input:"Quiero un tutor virtual para estudiantes universitarios que explique conceptos complejos mediante analogías, genere ejercicios prácticos graduados por dificultad, proporcione retroalimentación constructiva y adapte el estilo de enseñanza según el progreso del estudiante." },
-  { icon:"✍️", name:"Creador de Contenido",desc:"Redacción y marketing", input:"Necesito un asistente creativo de contenido digital que genere ideas originales para redes sociales, artículos de blog y newsletters, adapte el tono según la audiencia objetivo, optimice textos para SEO y mantenga coherencia con la identidad de marca establecida." },
-  { icon:"💻", name:"Programador Senior", desc:"Desarrollo y revisión de código", input:"Quiero un asistente experto en desarrollo de software que revise código en Python, JavaScript, TypeScript y SQL, identifique bugs y vulnerabilidades de seguridad, sugiera optimizaciones de rendimiento y explique las mejores prácticas de arquitectura de software." },
-  { icon:"🔍", name:"Bibliotecólogo",      desc:"Gestión bibliográfica", input:"Necesito un asistente especializado en bibliotecología y gestión de referencias bibliográficas que analice citas en APA, IEEE y Vancouver, detecte DOIs, identifique duplicados, corrija errores de formato y exporte resultados organizados a diferentes gestores bibliográficos." },
+  { id:1, icon:"📚", name:"Asistente Académico", desc:"Análisis e investigación",
+    input:"Quiero un asistente experto en investigación académica que analice artículos científicos, identifique metodologías, evalúe la calidad de las fuentes y genere resúmenes estructurados siguiendo normas APA 7. Debe distinguir entre fuentes primarias y secundarias y detectar posibles sesgos." },
+  { id:2, icon:"📊", name:"Analista de Datos",   desc:"Estadística y visualización",
+    input:"Necesito un asistente especialista en análisis de datos que interprete datasets en CSV y Excel, detecte patrones estadísticos, proponga visualizaciones adecuadas, genere código en Python o R y explique los resultados de forma accesible a audiencias no técnicas." },
+  { id:3, icon:"🎓", name:"Tutor Educativo",     desc:"Pedagogía adaptativa",
+    input:"Quiero un tutor virtual para estudiantes universitarios que explique conceptos complejos mediante analogías, genere ejercicios prácticos graduados por dificultad, proporcione retroalimentación constructiva y adapte el estilo de enseñanza según el progreso del estudiante." },
+  { id:4, icon:"✍️", name:"Creador de Contenido",desc:"Redacción y marketing",
+    input:"Necesito un asistente creativo de contenido digital que genere ideas originales para redes sociales, artículos de blog y newsletters, adapte el tono según la audiencia objetivo, optimice textos para SEO y mantenga coherencia con la identidad de marca establecida." },
+  { id:5, icon:"💻", name:"Programador Senior",  desc:"Desarrollo y revisión de código",
+    input:"Quiero un asistente experto en desarrollo de software que revise código en Python, JavaScript, TypeScript y SQL, identifique bugs y vulnerabilidades de seguridad, sugiera optimizaciones de rendimiento y explique las mejores prácticas de arquitectura de software." },
+  { id:6, icon:"🔍", name:"Bibliotecólogo",      desc:"Gestión bibliográfica",
+    input:"Necesito un asistente especializado en bibliotecología y gestión de referencias bibliográficas que analice citas en APA, IEEE y Vancouver, detecte DOIs, identifique duplicados, corrija errores de formato y exporte resultados organizados a diferentes gestores bibliográficos." },
 ];
 
-const grid = document.getElementById('templates-grid');
-TEMPLATES.forEach(t => {
-  const btn = document.createElement('button');
-  btn.className = 'tpl-btn';
-  btn.innerHTML = `<div class="tpl-icon">${t.icon}</div><div class="tpl-name">${t.name}</div><div class="tpl-desc">${t.desc}</div>`;
-  btn.onclick = () => { userInput.value = t.input; onInput(); };
-  grid.appendChild(btn);
-});
+const STRUCT_SECTIONS = [
+  "# Rol del Asistente","# Contexto","# Objetivos","# Reglas",
+  "# Restricciones","# Tono y Estilo","# Formato de Salida",
+  "# Ejemplos de Uso","# Limitaciones Conocidas"
+];
 
-// ── ELEMENTS ──
-const userInput   = document.getElementById('user-input');
-const mdEditor    = document.getElementById('md-editor');
-const btnGenerate = document.getElementById('btn-generate');
-const btnOptimize = document.getElementById('btn-optimize');
-const errorBox    = document.getElementById('error-box');
-const stats       = document.getElementById('stats');
-const genBadge    = document.getElementById('generating-badge');
-
-// ── INPUT EVENTS ──
-userInput.addEventListener('input', onInput);
-userInput.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) generate(); });
-mdEditor.addEventListener('input', updateStats);
-
-function onInput() {
-  document.getElementById('char-count').textContent = userInput.value.length + ' caracteres';
-  btnGenerate.disabled = !userInput.value.trim();
+// ═══════════════════════════════════════════════════════
+// MOTOR LOCAL 100% OFFLINE
+// ═══════════════════════════════════════════════════════
+function detectarRol(d) {
+  const t = d.toLowerCase();
+  if (t.includes("bibli")||t.includes("referencia")||t.includes("doi")||t.includes("apa")||t.includes("ieee")||t.includes("vancouver"))
+    return "bibliotecología y gestión bibliográfica";
+  if (t.includes("datos")||t.includes("csv")||t.includes("excel")||t.includes("estadísti")||t.includes("visualizaci")||t.includes("dataset"))
+    return "análisis de datos y visualización estadística";
+  if (t.includes("python")||t.includes("javascript")||t.includes("typescript")||t.includes("program")||t.includes("código")||t.includes("software")||t.includes("bug")||t.includes("sql"))
+    return "desarrollo de software y programación";
+  if (t.includes("artículo")||t.includes("investigaci")||t.includes("científi")||t.includes("académi")||t.includes("tesis")||t.includes("metodolog"))
+    return "investigación académica y análisis científico";
+  if (t.includes("marketing")||t.includes("contenido")||t.includes("seo")||t.includes("redes sociales")||t.includes("blog")||t.includes("redacci"))
+    return "creación de contenido y marketing digital";
+  if (t.includes("educat")||t.includes("enseñanza")||t.includes("estudiante")||t.includes("docen")||t.includes("tutor")||t.includes("aprendizaje")||t.includes("pedagog"))
+    return "educación y pedagogía adaptativa";
+  if (t.includes("legal")||t.includes("jurídic")||t.includes("derecho")||t.includes("contrato")||t.includes("normativ"))
+    return "asesoría legal y análisis normativo";
+  if (t.includes("salud")||t.includes("médic")||t.includes("clínic")||t.includes("paciente")||t.includes("diagnósti"))
+    return "ciencias de la salud e información clínica";
+  if (t.includes("finanz")||t.includes("contab")||t.includes("presupuest")||t.includes("inversión")||t.includes("económi"))
+    return "análisis financiero y contabilidad";
+  return "la tarea solicitada por el usuario";
 }
 
-// ── TAB SWITCHING ──
-let currentTab = 'editor';
-function switchTab(tab) {
-  currentTab = tab;
-  document.getElementById('tab-editor').classList.toggle('active', tab === 'editor');
-  document.getElementById('tab-preview').classList.toggle('active', tab === 'preview');
-  mdEditor.style.display        = tab === 'editor'  ? 'block' : 'none';
-  document.getElementById('preview-panel').style.display = tab === 'preview' ? 'block' : 'none';
-  if (tab === 'preview') renderPreview();
+function detectarObjetivos(d) {
+  const t = d.toLowerCase(), o = [];
+  if (t.includes("analiz")||t.includes("analít"))           o.push("Analizar y procesar la información proporcionada con rigor y profundidad.");
+  if (t.includes("generar")||t.includes("crear")||t.includes("producir")) o.push("Generar contenido estructurado, preciso y de alta calidad.");
+  if (t.includes("resum")||t.includes("sinteti"))            o.push("Resumir y sintetizar información compleja en formatos accesibles.");
+  if (t.includes("detectar")||t.includes("identific")||t.includes("encontrar")) o.push("Identificar patrones, errores o elementos relevantes con precisión.");
+  if (t.includes("exportar")||t.includes("formato")||t.includes("archivo")) o.push("Exportar y estructurar resultados en los formatos solicitados.");
+  if (t.includes("explicar")||t.includes("enseñar")||t.includes("clarificar")) o.push("Explicar conceptos complejos de manera clara y comprensible.");
+  if (t.includes("revisar")||t.includes("corregir")||t.includes("validar")) o.push("Revisar y validar la información para garantizar su exactitud.");
+  if (t.includes("optimizar")||t.includes("mejorar")||t.includes("refinar")) o.push("Optimizar y mejorar los resultados entregados iterativamente.");
+  if (t.includes("recomendar")||t.includes("sugerir")||t.includes("proponer")) o.push("Proporcionar recomendaciones fundamentadas y accionables.");
+  if (o.length === 0) { o.push("Comprender con precisión la intención del usuario.","Ejecutar la tarea con alto nivel técnico y profesional.","Proporcionar resultados estructurados y reutilizables."); }
+  while (o.length < 3) o.push("Asegurar la calidad y consistencia de cada respuesta entregada.");
+  return o.slice(0, 6);
 }
 
-// ── STATS ──
-function updateStats() {
-  const md = mdEditor.value;
-  if (!md) { stats.style.display = 'none'; return; }
-  stats.style.display = 'flex';
-  document.getElementById('stat-sections').textContent = (md.match(/^# /gm) || []).length;
-  document.getElementById('stat-words').textContent    = md.split(/\s+/).filter(Boolean).length + ' palabras';
-  document.getElementById('stat-chars').textContent    = md.length + ' chars';
-  const hasContent = md.trim().length > 0;
-  ['btn-md','btn-txt','btn-pdf','btn-copy'].forEach(id => document.getElementById(id).disabled = !hasContent);
-  document.getElementById('btn-clear').style.display = hasContent ? 'flex' : 'none';
-  btnOptimize.disabled = !hasContent;
+function detectarRestrictores(d) {
+  const t = d.toLowerCase();
+  const r = [
+    "No inventar datos, citas o referencias que no hayan sido proporcionados.",
+    "Indicar claramente las limitaciones o incertidumbres presentes.",
+    "Mantener consistencia terminológica a lo largo de toda la interacción.",
+  ];
+  if (t.includes("privad")||t.includes("confidencial")||t.includes("datos person"))
+    r.push("Tratar con absoluta confidencialidad los datos personales o sensibles.");
+  if (t.includes("médic")||t.includes("legal")||t.includes("financ"))
+    r.push("Aclarar que las respuestas no reemplazan asesoramiento profesional certificado.");
+  if (t.includes("código")||t.includes("program")||t.includes("software"))
+    r.push("No ejecutar ni sugerir código que pueda comprometer la seguridad del sistema.");
+  return r;
 }
 
-// ── TOAST ──
-function toast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.style.display = 'block';
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.style.display = 'none', 2500);
+function detectarFormato(d) {
+  const t = d.toLowerCase(), f = [];
+  if (t.includes("markdown")||t.includes(".md"))               f.push("Documento Markdown con estructura jerárquica.");
+  if (t.includes("excel")||t.includes("csv")||t.includes("tabla")) f.push("Tabla o archivo en formato Excel/CSV cuando aplique.");
+  if (t.includes("json"))                                       f.push("Objeto JSON estructurado cuando corresponda.");
+  if (t.includes("pdf"))                                        f.push("Informe exportable en formato PDF.");
+  if (t.includes("código")||t.includes("program"))             f.push("Bloques de código con sintaxis resaltada y comentarios explicativos.");
+  if (t.includes("resum")||t.includes("informe"))              f.push("Resumen ejecutivo con puntos clave destacados.");
+  if (t.includes("lista")||t.includes("viñeta"))               f.push("Listas con viñetas para mejorar la legibilidad.");
+  if (f.length === 0) f.push("Respuesta en Markdown con títulos y subtítulos jerárquicos.","Listas ordenadas y no ordenadas según corresponda.","Tablas comparativas cuando mejoren la comprensión del contenido.");
+  return f;
 }
 
-// ── ERROR ──
-function showError(msg) {
-  errorBox.textContent = '⚠️ ' + msg;
-  errorBox.style.display = 'block';
-}
-function clearError() { errorBox.style.display = 'none'; }
+function generarPromptLocal(desc) {
+  const rol = detectarRol(desc);
+  const objetivos = detectarObjetivos(desc);
+  const restricciones = detectarRestrictores(desc);
+  const formatos = detectarFormato(desc);
 
-// ── API CALL ──
-// ✅ FIX: header "anthropic-version" agregado (era la causa del error)
-async function callClaude(system, userMsg) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'anthropic-version': '2023-06-01'   // ← header obligatorio
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      system,
-      messages: [{ role: 'user', content: userMsg }]
-    })
+  return [
+    `# Rol del Asistente`,``,
+    `- Actúa como un especialista senior en ${rol}.`,
+    `- Posee amplia experiencia práctica y conocimiento técnico actualizado.`,
+    `- Entrega respuestas rigurosas, estructuradas, claras y orientadas a resultados.`,
+    `- Se adapta al nivel de conocimiento del usuario, ajustando el lenguaje y la profundidad.`,``,
+    `# Contexto`,``,
+    `- Solicitud original del usuario: "${desc}"`,
+    `- El objetivo es transformar esta solicitud en instrucciones precisas y reutilizables para cualquier modelo de IA.`,
+    `- La salida debe ser compatible con ChatGPT, Claude, Gemini y otros modelos de lenguaje.`,``,
+    `# Objetivos`,``,
+    ...objetivos.map(o=>`- ${o}`),``,
+    `# Reglas`,``,
+    `- Organiza siempre la información en secciones y subsecciones claras.`,
+    `- Usa listas con viñetas para mejorar la legibilidad cuando sea apropiado.`,
+    `- Incluye ejemplos concretos cuando aporten claridad y valor.`,
+    `- Solicita información adicional si faltan datos críticos para completar la tarea.`,
+    `- Prioriza la precisión sobre la extensión: sé conciso pero completo.`,``,
+    `# Restricciones`,``,
+    ...restricciones.map(r=>`- ${r}`),``,
+    `# Tono y Estilo`,``,
+    `- Profesional, preciso y directo.`,
+    `- Sin ambigüedades ni generalidades vagas.`,
+    `- Orientado a resultados concretos y accionables.`,
+    `- Emplea terminología específica del dominio cuando sea pertinente.`,``,
+    `# Formato de Salida`,``,
+    ...formatos.map(f=>`- ${f}`),``,
+    `# Ejemplos de Uso`,``,
+    `- Proporcionar análisis detallados con evidencia y justificación.`,
+    `- Crear resúmenes ejecutivos estructurados y fáciles de compartir.`,
+    `- Generar recomendaciones específicas con pasos de implementación.`,``,
+    `# Limitaciones Conocidas`,``,
+    `- La calidad del resultado depende directamente de la claridad del contexto entregado.`,
+    `- Si la solicitud es ambigua, deben explicitarse los supuestos utilizados.`,
+    `- El asistente no tiene acceso a información en tiempo real salvo que se le proporcione.`,
+  ].join("\n");
+}
+
+function optimizarPromptLocal(md) {
+  const tieneLimitaciones = md.includes("# Limitaciones");
+  const tieneEjemplos     = md.includes("# Ejemplos");
+  const lineas = [
+    ``,`# Recomendaciones de Uso Avanzado`,``,
+    `- Verifica que cada instrucción sea específica, medible y libre de ambigüedades.`,
+    `- Prioriza la claridad y la estructura por encima de la extensión del prompt.`,
+    `- Incluye siempre ejemplos de entrada y salida esperada cuando sea posible.`,
+    `- Define explícitamente las restricciones y los supuestos de partida.`,
+    `- Solicita aclaraciones al usuario antes de responder si faltan datos críticos.`,
+    `- Itera y refina el prompt basándote en los resultados obtenidos.`,``,
+    `# Criterios de Calidad`,``,
+    `- **Precisión**: Las respuestas deben ser técnicamente correctas y verificables.`,
+    `- **Relevancia**: El contenido debe responder directamente a la solicitud del usuario.`,
+    `- **Completitud**: Cubrir todos los aspectos relevantes sin omisiones importantes.`,
+    `- **Consistencia**: Mantener el mismo estilo, tono y terminología a lo largo de la respuesta.`,
+    `- **Utilidad**: El resultado debe ser directamente aplicable sin necesitar reformulación.`,
+  ];
+  if (!tieneEjemplos) lineas.push(
+    ``,`# Ejemplos de Interacción Esperada`,``,
+    `- **Usuario proporciona**: Contexto claro con datos específicos.`,
+    `- **Asistente entrega**: Respuesta estructurada, precisa y con los formatos solicitados.`,
+    `- **En caso de ambigüedad**: El asistente formula preguntas aclaratorias antes de proceder.`,
+  );
+  if (!tieneLimitaciones) lineas.push(
+    ``,`# Limitaciones Conocidas`,``,
+    `- Sin acceso a internet ni datos en tiempo real salvo los proporcionados.`,
+    `- El conocimiento tiene una fecha de corte según el modelo utilizado.`,
+    `- No puede ejecutar código real en producción, solo simularlo o sugerirlo.`,
+  );
+  return md + lineas.join("\n");
+}
+
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let history = [];
+let currentTab = "editor";
+let generating = false;
+let optimizing = false;
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+(function init() {
+  // Render templates
+  const grid = document.getElementById("templateGrid");
+  TEMPLATES.forEach(t => {
+    const btn = document.createElement("button");
+    btn.className = "template-card";
+    btn.innerHTML = `<div class="tmpl-icon">${t.icon}</div><div class="tmpl-name">${t.name}</div><div class="tmpl-desc">${t.desc}</div>`;
+    btn.onclick = () => { document.getElementById("userInput").value = t.input; onInputChange(); };
+    grid.appendChild(btn);
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.error?.message || 'HTTP ' + res.status);
-  if (!data.content?.[0]?.text) throw new Error('Respuesta inesperada de la API');
-  return data.content[0].text;
+
+  // Render structure
+  const sl = document.getElementById("structList");
+  STRUCT_SECTIONS.forEach(s => {
+    sl.innerHTML += `<div class="struct-item"><div class="struct-dot"></div><code class="struct-code">${s}</code></div>`;
+  });
+
+  // Load history
+  try {
+    const raw = localStorage.getItem("pf-history-offline");
+    if (raw) history = JSON.parse(raw);
+    renderHistory();
+  } catch(e) {}
+})();
+
+// ═══════════════════════════════════════════════════════
+// HISTORY
+// ═══════════════════════════════════════════════════════
+function renderHistory() {
+  const count = history.length;
+  const btn = document.getElementById("historyToggle");
+  document.getElementById("histCount").textContent = count;
+  btn.style.display = count > 0 ? "block" : "none";
+
+  const scroll = document.getElementById("historyScroll");
+  scroll.innerHTML = "";
+  history.slice(0, 12).forEach(e => {
+    const card = document.createElement("button");
+    card.className = "history-card";
+    card.innerHTML = `<div class="history-date">${e.date} ${e.time}</div><div class="history-prev">${escHtml(e.preview)}</div>`;
+    card.onclick = () => {
+      document.getElementById("userInput").value = e.input;
+      setMd(e.md);
+      onInputChange();
+      document.getElementById("historyPanel").style.display = "none";
+    };
+    scroll.appendChild(card);
+  });
 }
 
-// ── GENERATE ──
+function saveHistory(input, md) {
+  const entry = {
+    id: Date.now(),
+    date: new Date().toLocaleDateString("es-CL"),
+    time: new Date().toLocaleTimeString("es-CL", {hour:"2-digit",minute:"2-digit"}),
+    preview: input.slice(0, 80) + (input.length > 80 ? "…" : ""),
+    input, md
+  };
+  history = [entry, ...history].slice(0, 30);
+  try { localStorage.setItem("pf-history-offline", JSON.stringify(history)); } catch(e) {}
+  renderHistory();
+}
+
+function toggleHistory() {
+  const p = document.getElementById("historyPanel");
+  p.style.display = p.style.display === "block" ? "none" : "block";
+}
+
+// ═══════════════════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════════════════
+function onInputChange() {
+  const v = document.getElementById("userInput").value;
+  document.getElementById("charCount").textContent = v.length + " caracteres";
+  document.getElementById("btnGenerate").disabled = !v.trim() || generating;
+}
+
+function handleKey(e) {
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) generate();
+}
+
+function onMdChange() {
+  updateStats();
+  if (currentTab === "preview") renderPreview();
+}
+
 async function generate() {
-  if (!userInput.value.trim() || btnGenerate.disabled) return;
-  btnGenerate.disabled = true;
-  btnGenerate.innerHTML = '<span class="spinner"></span> Generando…';
-  genBadge.style.display = 'block';
-  clearError();
-  try {
-    const result = await callClaude(
-      `Eres un experto en ingeniería de prompts para IA. Tu única tarea es transformar descripciones en lenguaje natural en prompts Markdown profesionales y estructurados, optimizados para ChatGPT, Claude y Gemini.
+  if (generating) return;
+  const input = document.getElementById("userInput").value.trim();
+  if (!input) return;
 
-INSTRUCCIONES ESTRICTAS:
-- Responde ÚNICAMENTE con el contenido Markdown. Sin explicaciones, sin bloques de código, sin comillas.
-- Usa el mismo idioma que el usuario (español si escribe en español).
-- SIEMPRE incluye las secciones: # Rol del Asistente, # Objetivos, # Reglas, # Restricciones, # Formato de Salida
-- Agrega secciones adicionales relevantes si aplica: # Contexto, # Tono y Estilo, # Ejemplos de Uso, # Limitaciones Conocidas
-- Usa guiones (- ) para los puntos de cada sección, mínimo 3 puntos por sección
-- Sé específico, profesional y preciso. Evita generalidades`,
-      userInput.value
-    );
-    mdEditor.value = result;
-    updateStats();
-    if (currentTab === 'preview') renderPreview();
-    toast('✅ Prompt generado correctamente');
-  } catch(e) {
-    showError('Error al generar: ' + e.message);
+  generating = true;
+  document.getElementById("btnGenerate").disabled = true;
+  document.getElementById("btnGenerate").innerHTML = '<span class="spinner"></span> Generando…';
+  document.getElementById("generatingBadge").style.display = "block";
+
+  await delay(400);
+  try {
+    const result = generarPromptLocal(input);
+    setMd(result);
+    saveHistory(input, result);
+    showToast("✅ Prompt generado correctamente");
   } finally {
-    btnGenerate.disabled = !userInput.value.trim();
-    btnGenerate.innerHTML = '⚡ Generar Prompt';
-    genBadge.style.display = 'none';
+    generating = false;
+    document.getElementById("btnGenerate").innerHTML = "⚡ Generar Prompt";
+    document.getElementById("btnGenerate").disabled = !document.getElementById("userInput").value.trim();
+    document.getElementById("generatingBadge").style.display = "none";
   }
 }
 
-// ── OPTIMIZE ──
 async function optimize() {
-  if (!mdEditor.value.trim()) return;
-  btnOptimize.disabled = true;
-  btnOptimize.innerHTML = '<span class="spinner dark"></span> Optimizando…';
-  clearError();
-  try {
-    const result = await callClaude(
-      `Eres un experto senior en ingeniería de prompts. Tu tarea es mejorar y optimizar un prompt Markdown existente.
+  if (optimizing) return;
+  const md = document.getElementById("mdEditor").value.trim();
+  if (!md) return;
 
-INSTRUCCIONES:
-- Responde ÚNICAMENTE con el Markdown mejorado. Sin explicaciones ni comentarios.
-- Conserva la estructura y secciones existentes, mejorando su contenido
-- Agrega detalles específicos y contexto donde haya generalidades
-- Mejora la redacción para mayor claridad, precisión y efectividad
-- Añade reglas o restricciones importantes que falten
-- Fortalece el rol del asistente con capacidades más específicas
-- Enriquece el formato de salida con detalles concretos`,
-      'Optimiza este prompt:\n\n' + mdEditor.value
-    );
-    mdEditor.value = result;
-    updateStats();
-    if (currentTab === 'preview') renderPreview();
-    toast('✨ Prompt optimizado exitosamente');
-  } catch(e) {
-    showError('Error al optimizar: ' + e.message);
+  optimizing = true;
+  document.getElementById("btnOptimize").disabled = true;
+  document.getElementById("btnOptimize").innerHTML = '<span class="spinner dark"></span> Optimizando…';
+
+  await delay(350);
+  try {
+    const result = optimizarPromptLocal(md);
+    setMd(result);
+    showToast("✨ Prompt optimizado exitosamente");
   } finally {
-    btnOptimize.disabled = false;
-    btnOptimize.innerHTML = '✨ Optimizar';
+    optimizing = false;
+    document.getElementById("btnOptimize").innerHTML = "✨ Optimizar";
+    document.getElementById("btnOptimize").disabled = !document.getElementById("mdEditor").value.trim();
   }
 }
 
-// ── PREVIEW RENDERER ──
-function renderPreview() {
-  const md = mdEditor.value.trim();
-  const empty = document.getElementById('empty-state');
-  const content = document.getElementById('preview-content');
-  if (!md) { empty.style.display='flex'; content.innerHTML=''; return; }
-  empty.style.display = 'none';
-  const lines = md.split('\n');
-  let html = '';
-  let inList = false;
-  lines.forEach(line => {
-    if (line.startsWith('# ')) {
-      if (inList) { html += '</ul>'; inList = false; }
-      html += `<h1>${esc(line.slice(2))}</h1><div class="h1-under"></div>`;
-    } else if (line.startsWith('## ')) {
-      if (inList) { html += '</ul>'; inList = false; }
-      html += `<h2>${esc(line.slice(3))}</h2>`;
-    } else if (line.startsWith('### ')) {
-      if (inList) { html += '</ul>'; inList = false; }
-      html += `<h3>${esc(line.slice(4))}</h3>`;
-    } else if (line.startsWith('- ') || line.startsWith('* ')) {
-      if (!inList) { html += '<ul>'; inList = true; }
-      html += `<li>${esc(line.slice(2))}</li>`;
-    } else if (line.startsWith('> ')) {
-      if (inList) { html += '</ul>'; inList = false; }
-      html += `<blockquote>${esc(line.slice(2))}</blockquote>`;
-    } else if (line.trim() === '') {
-      if (inList) { html += '</ul>'; inList = false; }
-    } else {
-      if (inList) { html += '</ul>'; inList = false; }
-      html += `<p>${esc(line)}</p>`;
-    }
-  });
-  if (inList) html += '</ul>';
-  content.innerHTML = html;
-}
-function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-// ── EXPORT ──
-function download(ext, type) {
-  const md = mdEditor.value;
-  if (!md) return;
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([md], { type }));
-  a.download = 'prompt-' + Date.now() + '.' + ext;
-  a.click();
-  toast('📥 Descargando .' + ext + '…');
+function setMd(text) {
+  document.getElementById("mdEditor").value = text;
+  updateStats();
+  updateExportButtons(!!text);
+  if (currentTab === "preview") renderPreview();
 }
 
-function printPDF() {
-  const md = mdEditor.value;
-  if (!md) return;
-  const w = window.open('', '_blank');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Prompt</title>
-  <style>body{font-family:Georgia,serif;max-width:760px;margin:40px auto;padding:0 30px;line-height:1.8;color:#2C2C2A}
-  h1{font-size:20px;color:#085041;border-bottom:2px solid #1D9E75;padding-bottom:6px;margin-top:28px}
-  h2{font-size:16px;color:#0F6E56;margin-top:20px}pre{white-space:pre-wrap;font-family:Georgia,serif;font-size:14px}
-  @media print{body{margin:0;padding:20px}}</style></head>
-  <body><pre>${md.replace(/</g,'&lt;')}</pre></body></html>`);
-  w.document.close();
-  w.print();
+function updateStats() {
+  const md = document.getElementById("mdEditor").value;
+  if (!md) { document.getElementById("statsBar").style.display = "none"; return; }
+  const sections = (md.match(/^# /gm) || []).length;
+  const words    = md.split(/\s+/).filter(Boolean).length;
+  document.getElementById("statsBar").style.display = "flex";
+  document.getElementById("statSections").textContent = sections;
+  document.getElementById("statWords").textContent    = words;
+  document.getElementById("statChars").textContent    = md.length;
 }
 
-async function copyMd() {
-  const btn = document.getElementById('btn-copy');
-  try {
-    await navigator.clipboard.writeText(mdEditor.value);
-    btn.textContent = '✅ ¡Copiado!';
-    setTimeout(() => btn.textContent = '📋 Copiar', 2000);
-  } catch {
-    btn.textContent = '❌ Error';
-    setTimeout(() => btn.textContent = '📋 Copiar', 2000);
-  }
+function updateExportButtons(has) {
+  ["btnMd","btnTxt","btnPdf","btnCopy"].forEach(id => document.getElementById(id).disabled = !has);
+  document.getElementById("btnOptimize").disabled = !has;
+  document.getElementById("btnClear").style.display = has ? "flex" : "none";
 }
 
 function clearAll() {
-  mdEditor.value = '';
-  updateStats();
-  document.getElementById('preview-content').innerHTML = '';
-  document.getElementById('empty-state').style.display = 'flex';
+  setMd("");
+  document.getElementById("statsBar").style.display = "none";
 }
 
-// ── WIRE UP BUTTONS ──
-btnGenerate.onclick = generate;
-btnOptimize.onclick = optimize;
+// ═══════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════
+function switchTab(tab) {
+  currentTab = tab;
+  const editor  = document.getElementById("mdEditor");
+  const preview = document.getElementById("previewPane");
+  const badge   = document.getElementById("generatingBadge");
+
+  if (tab === "editor") {
+    editor.style.display  = "block";
+    badge.style.display   = generating ? "block" : "none";
+    preview.style.display = "none";
+  } else {
+    editor.style.display  = "none";
+    badge.style.display   = "none";
+    preview.style.display = "block";
+    renderPreview();
+  }
+
+  document.getElementById("tab-editor").classList.toggle("active",  tab === "editor");
+  document.getElementById("tab-preview").classList.toggle("active", tab === "preview");
+}
+
+// ═══════════════════════════════════════════════════════
+// MARKDOWN RENDERER
+// ═══════════════════════════════════════════════════════
+function renderPreview() {
+  const md = document.getElementById("mdEditor").value;
+  const content = document.getElementById("previewContent");
+  const empty   = document.getElementById("emptyState");
+
+  if (!md.trim()) {
+    content.innerHTML = ""; empty.style.display = "flex"; return;
+  }
+  empty.style.display = "none";
+
+  const lines = md.split("\n");
+  let html = "";
+  let inList = false;
+
+  const flushList = () => { if (inList) { html += "</ul>"; inList = false; } };
+  const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const bold = s => esc(s).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
+
+  lines.forEach(line => {
+    if (line.startsWith("# ")) {
+      flushList();
+      html += `<div class="md-h1-wrap"><h1 class="md-h1">${esc(line.slice(2))}</h1><div class="md-h1-line"></div></div>`;
+    } else if (line.startsWith("## ")) {
+      flushList();
+      html += `<h2 class="md-h2">${esc(line.slice(3))}</h2>`;
+    } else if (line.startsWith("### ")) {
+      flushList();
+      html += `<h3 class="md-h3">${esc(line.slice(4))}</h3>`;
+    } else if (line.startsWith("- ") || line.startsWith("* ")) {
+      if (!inList) { html += `<ul class="md-ul">`; inList = true; }
+      html += `<li class="md-li"><span class="md-li-bullet">▸</span><span>${bold(line.slice(2))}</span></li>`;
+    } else if (line.startsWith("> ")) {
+      flushList();
+      html += `<blockquote class="md-bq">${bold(line.slice(2))}</blockquote>`;
+    } else if (line.trim() === "") {
+      flushList();
+      html += `<div style="height:6px"></div>`;
+    } else {
+      flushList();
+      html += `<p class="md-p">${bold(line)}</p>`;
+    }
+  });
+  flushList();
+  content.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
+// EXPORT
+// ═══════════════════════════════════════════════════════
+function downloadFile(ext, type) {
+  const md = document.getElementById("mdEditor").value;
+  if (!md) return;
+  const blob = new Blob([md], {type});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url; a.download = `prompt-${Date.now()}.${ext}`; a.click();
+  URL.revokeObjectURL(url);
+  showToast(`📥 Descargando .${ext}…`);
+}
+
+function printPDF() {
+  const md = document.getElementById("mdEditor").value;
+  if (!md) return;
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Prompt</title>
+  <style>body{font-family:Georgia,serif;max-width:760px;margin:40px auto;padding:0 30px;line-height:1.8;color:#2C2C2A}
+  h1{font-size:20px;color:#085041;border-bottom:2px solid #1D9E75;padding-bottom:6px;margin-top:28px}
+  ul{list-style:none;padding-left:16px}li::before{content:"▸ ";color:#1D9E75}
+  li{margin-bottom:5px;font-size:14px}p{font-size:14px}
+  @media print{body{margin:0;padding:20px}}</style></head>
+  <body><pre style="white-space:pre-wrap;font-family:Georgia,serif;font-size:14px">${md.replace(/</g,"&lt;")}</pre></body></html>`;
+  const w = window.open("","_blank");
+  w.document.write(html); w.document.close(); w.print();
+}
+
+async function copyMd() {
+  const md = document.getElementById("mdEditor").value;
+  if (!md) return;
+  const btn = document.getElementById("btnCopy");
+  try {
+    await navigator.clipboard.writeText(md);
+    btn.innerHTML = "✅ ¡Copiado!";
+    btn.style.color = "var(--green-md)";
+    btn.style.borderColor = "var(--green)";
+  } catch {
+    btn.innerHTML = "❌ Error";
+  }
+  setTimeout(() => { btn.innerHTML = "📋 Copiar"; btn.style.color=""; btn.style.borderColor=""; }, 2000);
+}
+
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.style.display = "block";
+  setTimeout(() => { t.style.display = "none"; }, 2500);
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 </script>
 </body>
 </html>
