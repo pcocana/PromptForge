@@ -188,7 +188,7 @@
 
     /* Templates */
     .templates-section { padding:16px 20px; }
-    .template-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .template-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
     .template-card {
       padding:11px 12px; border-radius:9px;
       border:1.5px solid var(--border-lt); background:#FAFAF8;
@@ -438,6 +438,10 @@ const TEMPLATES = [
     input:"Quiero un asistente experto en desarrollo de software que revise código en Python, JavaScript, TypeScript y SQL, identifique bugs y vulnerabilidades de seguridad, sugiera optimizaciones de rendimiento y explique las mejores prácticas de arquitectura de software." },
   { id:6, icon:"🔍", name:"Bibliotecólogo",      desc:"Gestión bibliográfica",
     input:"Necesito un asistente especializado en bibliotecología y gestión de referencias bibliográficas que analice citas en APA, IEEE y Vancouver, detecte DOIs, identifique duplicados, corrija errores de formato y exporte resultados organizados a diferentes gestores bibliográficos." },
+  { id:7, icon:"🔎", name:"Buscador Avanzado",   desc:"Palabras clave y fórmulas",
+    input:"Necesito una herramienta que analice el contenido que le entrego, extraiga las palabras clave y descriptores más relevantes, y luego construya las mejores fórmulas de búsqueda usando operadores booleanos (AND, OR, NOT) y truncamiento para usar en bases de datos académicas como Scopus, Web of Science, PubMed y Google Scholar." },
+  { id:8, icon:"🌐", name:"Interfaz Web HTML",   desc:"Pestañas y componentes",
+    input:"Necesito agregar una nueva pestaña a mi aplicación web en HTML que funcione de forma integrada con las secciones existentes. La pestaña debe tener navegación funcional, estilos coherentes con el diseño actual y el código debe incluir comentarios explicativos para facilitar su mantenimiento." },
 ];
 
 const STRUCT_SECTIONS = [
@@ -451,12 +455,29 @@ const STRUCT_SECTIONS = [
 // ═══════════════════════════════════════════════════════
 function detectarRol(d) {
   const t = d.toLowerCase();
+  // ── Recuperación de información y búsqueda en bases de datos ──
+  if (t.includes("palabras clave")||t.includes("palabra clave")||t.includes("keywords")||
+      t.includes("búsqueda")||t.includes("busqueda")||t.includes("buscador")||
+      t.includes("base de datos")||t.includes("bases de datos")||
+      t.includes("scopus")||t.includes("web of science")||t.includes("wos")||
+      t.includes("pubmed")||t.includes("google scholar")||t.includes("eric")||
+      t.includes("operador")||t.includes("booleano")||t.includes("truncam")||
+      t.includes("recuperaci")||t.includes("fórmula de búsqueda")||t.includes("formula de busqueda")||
+      t.includes("descriptor")||t.includes("tesauro")||t.includes("thesaurus")||
+      t.includes("mesh")||t.includes("ecuación de búsqueda"))
+    return "recuperación de información, búsqueda avanzada en bases de datos académicas y construcción de fórmulas de búsqueda con operadores booleanos";
+  // ── Bibliotecología y referencias ──
   if (t.includes("bibli")||t.includes("referencia")||t.includes("doi")||t.includes("apa")||t.includes("ieee")||t.includes("vancouver"))
     return "bibliotecología y gestión bibliográfica";
+  // ── Datos y estadística ──
   if (t.includes("datos")||t.includes("csv")||t.includes("excel")||t.includes("estadísti")||t.includes("visualizaci")||t.includes("dataset"))
     return "análisis de datos y visualización estadística";
+  // ── Desarrollo web y software ──
+  if (t.includes("html")||t.includes("css")||t.includes("pestaña")||t.includes("interfaz")||t.includes("frontend")||t.includes("web"))
+    return "desarrollo web y programación de interfaces de usuario";
   if (t.includes("python")||t.includes("javascript")||t.includes("typescript")||t.includes("program")||t.includes("código")||t.includes("software")||t.includes("bug")||t.includes("sql"))
     return "desarrollo de software y programación";
+  // ── Investigación académica ──
   if (t.includes("artículo")||t.includes("investigaci")||t.includes("científi")||t.includes("académi")||t.includes("tesis")||t.includes("metodolog"))
     return "investigación académica y análisis científico";
   if (t.includes("marketing")||t.includes("contenido")||t.includes("seo")||t.includes("redes sociales")||t.includes("blog")||t.includes("redacci"))
@@ -474,6 +495,21 @@ function detectarRol(d) {
 
 function detectarObjetivos(d) {
   const t = d.toLowerCase(), o = [];
+  // ── Búsqueda y recuperación de información ──
+  if (t.includes("palabras clave")||t.includes("palabra clave")||t.includes("keywords")||t.includes("descriptor"))
+    o.push("Extraer y jerarquizar palabras clave, descriptores y términos MeSH relevantes a partir del contenido entregado.");
+  if (t.includes("búsqueda")||t.includes("busqueda")||t.includes("fórmula")||t.includes("formula")||t.includes("ecuación")||t.includes("operador")||t.includes("booleano"))
+    o.push("Construir fórmulas de búsqueda avanzadas usando operadores booleanos (AND, OR, NOT), truncamiento (*) y comillas para frases exactas.");
+  if (t.includes("base de datos")||t.includes("bases de datos")||t.includes("scopus")||t.includes("wos")||t.includes("pubmed")||t.includes("google scholar"))
+    o.push("Adaptar las estrategias de búsqueda a las sintaxis específicas de cada base de datos (Scopus, WoS, PubMed, Google Scholar, ERIC).");
+  if (t.includes("buscador")||t.includes("búsqueda efectiva")||t.includes("recuperaci"))
+    o.push("Maximizar la precisión y exhaustividad de los resultados minimizando el ruido documental.");
+  // ── HTML / interfaz web ──
+  if (t.includes("html")||t.includes("pestaña")||t.includes("interfaz")||t.includes("web")||t.includes("frontend"))
+    o.push("Implementar la solución como código HTML funcional, semántico y bien estructurado con comentarios explicativos.");
+  if (t.includes("pestaña")||t.includes("tab")||t.includes("sección"))
+    o.push("Diseñar e integrar la nueva pestaña de forma coherente con la interfaz existente, respetando estilos y navegación.");
+  // ── Objetivos generales ──
   if (t.includes("analiz")||t.includes("analít"))           o.push("Analizar y procesar la información proporcionada con rigor y profundidad.");
   if (t.includes("generar")||t.includes("crear")||t.includes("producir")) o.push("Generar contenido estructurado, preciso y de alta calidad.");
   if (t.includes("resum")||t.includes("sinteti"))            o.push("Resumir y sintetizar información compleja en formatos accesibles.");
@@ -495,6 +531,17 @@ function detectarRestrictores(d) {
     "Indicar claramente las limitaciones o incertidumbres presentes.",
     "Mantener consistencia terminológica a lo largo de toda la interacción.",
   ];
+  // ── Búsqueda y recuperación ──
+  if (t.includes("búsqueda")||t.includes("busqueda")||t.includes("palabras clave")||t.includes("base de datos"))
+    r.push("Las fórmulas de búsqueda deben ser verificables y reproducibles en las bases de datos indicadas.");
+  if (t.includes("búsqueda")||t.includes("busqueda")||t.includes("operador")||t.includes("booleano"))
+    r.push("Respetar la sintaxis exacta de operadores booleanos y truncamiento propia de cada base de datos.");
+  // ── HTML / web ──
+  if (t.includes("html")||t.includes("pestaña")||t.includes("web")||t.includes("interfaz"))
+    r.push("El código HTML entregado debe ser funcional, semántico y no romper la estructura ni estilos preexistentes.");
+  if (t.includes("html")||t.includes("pestaña"))
+    r.push("Incluir comentarios en el código que expliquen cada bloque funcional para facilitar su mantenimiento.");
+  // ── Generales contextuales ──
   if (t.includes("privad")||t.includes("confidencial")||t.includes("datos person"))
     r.push("Tratar con absoluta confidencialidad los datos personales o sensibles.");
   if (t.includes("médic")||t.includes("legal")||t.includes("financ"))
@@ -506,11 +553,23 @@ function detectarRestrictores(d) {
 
 function detectarFormato(d) {
   const t = d.toLowerCase(), f = [];
+  // ── Búsqueda avanzada ──
+  if (t.includes("palabras clave")||t.includes("palabra clave")||t.includes("keywords")||t.includes("descriptor"))
+    f.push("Lista jerarquizada de palabras clave principales, secundarias y sinónimos en español e inglés.");
+  if (t.includes("búsqueda")||t.includes("busqueda")||t.includes("fórmula")||t.includes("formula")||t.includes("booleano")||t.includes("operador"))
+    f.push("Fórmulas de búsqueda listas para copiar, con operadores booleanos (AND, OR, NOT), truncamiento (*) y frases exactas entre comillas.");
+  if (t.includes("base de datos")||t.includes("bases de datos")||t.includes("scopus")||t.includes("wos")||t.includes("pubmed"))
+    f.push("Tabla comparativa con la fórmula adaptada para cada base de datos (Scopus, WoS, PubMed, Google Scholar).");
+  // ── HTML / interfaz ──
+  if (t.includes("html")||t.includes("pestaña")||t.includes("web")||t.includes("interfaz")||t.includes("frontend"))
+    f.push("Código HTML completo, funcional y listo para integrar, con CSS y JavaScript incluidos en el mismo bloque.");
+  if (t.includes("pestaña")||t.includes("tab"))
+    f.push("Estructura de pestañas (tabs) con navegación funcional entre secciones, integrable en la aplicación existente.");
+  // ── Formatos generales ──
   if (t.includes("markdown")||t.includes(".md"))               f.push("Documento Markdown con estructura jerárquica.");
   if (t.includes("excel")||t.includes("csv")||t.includes("tabla")) f.push("Tabla o archivo en formato Excel/CSV cuando aplique.");
   if (t.includes("json"))                                       f.push("Objeto JSON estructurado cuando corresponda.");
   if (t.includes("pdf"))                                        f.push("Informe exportable en formato PDF.");
-  if (t.includes("código")||t.includes("program"))             f.push("Bloques de código con sintaxis resaltada y comentarios explicativos.");
   if (t.includes("resum")||t.includes("informe"))              f.push("Resumen ejecutivo con puntos clave destacados.");
   if (t.includes("lista")||t.includes("viñeta"))               f.push("Listas con viñetas para mejorar la legibilidad.");
   if (f.length === 0) f.push("Respuesta en Markdown con títulos y subtítulos jerárquicos.","Listas ordenadas y no ordenadas según corresponda.","Tablas comparativas cuando mejoren la comprensión del contenido.");
