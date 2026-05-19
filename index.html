@@ -1,959 +1,859 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PromptForge — Generador de Prompts Offline</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PromptForge — 100% Local</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --teal-dark:#085041; --teal-mid:#0F6E56; --teal-main:#1D9E75;
+    --teal-light:#5DCAA5; --teal-pale:#9FE1CB; --teal-ghost:#E1F5EE;
+    --bg-page:#F4F2EE; --bg-card:#FAFAF8; --bg-alt:#F8F7F4; --bg-ref:#F1EFE8;
+    --border:#D3D1C7; --border-soft:#E8E6E0;
+    --text-main:#2C2C2A; --text-mid:#444441; --text-muted:#5F5E5A;
+    --text-hint:#888780; --text-faint:#B4B2A9;
+    --header-bg:#0A1E1C; --editor-bg:#0E1E1C; --editor-text:#9FE1CB; --editor-border:#2C4A47;
+    --red-bg:#FCEBEB; --red-border:#F09595; --red-text:#A32D2D;
+    --amber-text:#BA7517;
+  }
+  html,body{height:100%;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;background:var(--bg-page);color:var(--text-main);}
 
-    :root {
-      --bg:        #F4F2EE;
-      --bg-panel:  #F8F7F4;
-      --white:     #ffffff;
-      --border:    #D3D1C7;
-      --border-lt: #E8E6E0;
-      --bg-ref:    #F1EFE8;
-      --green-dk:  #085041;
-      --green-md:  #0F6E56;
-      --green:     #1D9E75;
-      --green-lt:  #E1F5EE;
-      --green-pal: #A8DCC8;
-      --green-bg:  #E8F5F0;
-      --teal-dk:   #0A1E1C;
-      --teal-md:   #1D2B2A;
-      --teal-brdr: #2C4A47;
-      --teal-text: #9FE1CB;
-      --teal-sub:  #5DCAA5;
-      --text:      #2C2C2A;
-      --text-md:   #444441;
-      --text-lt:   #5F5E5A;
-      --muted:     #888780;
-      --muted-lt:  #B4B2A9;
-      --red:       #A32D2D;
-      --red-lt:    #F09595;
-      --red-bg:    #FCEBEB;
-      --editor-bg: #0E1E1C;
-    }
+  header{background:var(--header-bg);height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0;position:sticky;top:0;z-index:100;}
+  .logo{display:flex;align-items:center;gap:12px;}
+  .logo-icon{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,#1D9E75,#085041);display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .logo-name{color:#E1F5EE;font-size:17px;font-weight:700;font-family:Georgia,serif;letter-spacing:-0.5px;line-height:1.2;}
+  .logo-sub{color:#5DCAA5;font-size:11px;}
+  .header-right{display:flex;gap:8px;align-items:center;}
+  .badge-local{background:#1D2B2A;color:#5DCAA5;font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid #2C4A47;}
+  .btn-history{background:#1D2B2A;color:#9FE1CB;border:1px solid #2C4A47;font-size:12px;padding:6px 12px;border-radius:8px;cursor:pointer;display:none;align-items:center;gap:5px;}
+  .btn-history.visible{display:flex;}
 
-    html, body { height: 100%; overflow: hidden; }
+  #toast{position:fixed;top:16px;right:16px;z-index:9999;background:var(--teal-dark);color:var(--teal-pale);padding:10px 18px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,0.25);opacity:0;transform:translateY(-8px);transition:opacity 0.2s,transform 0.2s;pointer-events:none;}
+  #toast.show{opacity:1;transform:translateY(0);}
 
-    body {
-      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-    }
+  #history-panel{background:#fff;border-bottom:1.5px solid var(--border);padding:14px 24px;display:none;}
+  #history-panel.open{display:block;}
+  .history-label{font-size:11px;font-weight:700;color:var(--text-hint);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px;}
+  .history-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;}
+  .history-card{flex-shrink:0;padding:8px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg-card);cursor:pointer;text-align:left;max-width:200px;transition:border-color 0.15s,background 0.15s;}
+  .history-card:hover{border-color:var(--teal-main);background:var(--teal-ghost);}
+  .history-date{font-size:11px;color:var(--text-hint);margin-bottom:3px;}
+  .history-preview{font-size:12px;color:var(--text-main);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
 
-    /* ── Scrollbar ── */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-    ::-webkit-scrollbar-thumb:hover { background: var(--muted-lt); }
+  #main{display:grid;grid-template-columns:420px 1fr;min-height:calc(100vh - 58px);}
+  #left{background:#fff;border-right:1.5px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
+  .section-label{font-size:11px;font-weight:700;color:var(--text-hint);text-transform:uppercase;letter-spacing:0.8px;}
 
-    /* ── Animations ── */
-    @keyframes fadeDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
-    @keyframes spin     { to { transform: rotate(360deg); } }
-    @keyframes pulse    { 0%,100%{opacity:1} 50%{opacity:.5} }
+  .input-wrap{padding:20px 20px 14px;}
+  .input-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  #char-count{font-size:11px;color:var(--text-faint);transition:color 0.2s;}
+  #char-count.active{color:var(--teal-main);}
+  textarea{width:100%;padding:12px 14px;border-radius:9px;border:1.5px solid var(--border);background:var(--bg-card);font-family:system-ui,sans-serif;font-size:13.5px;line-height:1.65;color:var(--text-main);outline:none;transition:border-color 0.2s;resize:vertical;}
+  textarea:focus{border-color:var(--teal-main);}
+  textarea::placeholder{color:var(--text-hint);}
+  .input-hint{font-size:11px;color:var(--text-faint);margin-top:5px;display:flex;justify-content:space-between;}
+  .warn-short{color:var(--amber-text);display:none;}
 
-    /* ── Toast ── */
-    #toast {
-      display: none;
-      position: fixed; top: 16px; right: 16px; z-index: 9999;
-      background: var(--green-dk); color: var(--teal-text);
-      padding: 10px 18px; border-radius: 10px;
-      font-size: 13px; font-weight: 500;
-      box-shadow: 0 4px 20px rgba(0,0,0,.25);
-      animation: fadeDown .2s ease;
-    }
+  .btn-row{padding:0 20px 14px;display:flex;gap:8px;}
+  .btn-primary{flex:1;padding:11px 18px;border-radius:9px;border:none;cursor:pointer;font-size:14px;font-weight:600;background:linear-gradient(135deg,#1D9E75,#0F6E56);color:#fff;display:flex;align-items:center;justify-content:center;gap:7px;box-shadow:0 2px 8px rgba(15,110,86,0.3);transition:all 0.2s;}
+  .btn-primary:disabled{background:var(--text-faint);box-shadow:none;cursor:not-allowed;opacity:0.7;}
+  .btn-secondary{padding:9px 14px;border-radius:8px;border:1.5px solid var(--border);cursor:pointer;font-size:13px;font-weight:500;background:#fff;color:var(--text-mid);display:flex;align-items:center;gap:6px;transition:all 0.2s;}
+  .btn-secondary:disabled{cursor:not-allowed;opacity:0.5;}
+  .btn-secondary:not(:disabled):hover{border-color:var(--teal-main);background:var(--teal-ghost);color:var(--teal-mid);}
 
-    /* ── HEADER ── */
-    header {
-      background: var(--teal-dk);
-      height: 58px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 24px;
-    }
-    .logo { display:flex; align-items:center; gap:12px; }
-    .logo-icon {
-      width:34px; height:34px; border-radius:8px;
-      background:var(--green); display:flex; align-items:center; justify-content:center; font-size:17px;
-    }
-    .logo-title { color:#E1F5EE; font-size:17px; font-weight:700; font-family:Georgia,serif; letter-spacing:-.5px; line-height:1.2; }
-    .logo-sub   { color:var(--teal-sub); font-size:11px; }
-    .header-right { display:flex; gap:8px; align-items:center; }
-    .badge-local {
-      background:var(--teal-md); color:var(--teal-sub);
-      font-size:11px; padding:4px 12px; border-radius:20px;
-      border:1px solid var(--teal-brdr);
-      display:flex; align-items:center; gap:5px;
-    }
-    .badge-dot { width:7px; height:7px; border-radius:50%; background:var(--green); }
-    #historyToggle {
-      padding:6px 12px; border-radius:8px; border:1px solid var(--teal-brdr);
-      background:var(--teal-md); color:var(--teal-text);
-      cursor:pointer; font-size:12px; font-weight:500; display:none;
-    }
+  .info-box{margin:0 20px 14px;padding:10px 14px;background:var(--teal-ghost);border:1px solid var(--teal-pale);border-radius:8px;font-size:12px;color:var(--teal-mid);line-height:1.6;}
+  .info-box strong{display:block;margin-bottom:3px;}
+  .divider{height:1px;background:var(--bg-ref);margin:0 20px;}
+  .templates-wrap{padding:14px 20px;}
+  .templates-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+  .tpl-card{padding:11px 12px;border-radius:9px;border:1.5px solid var(--border-soft);background:var(--bg-card);cursor:pointer;text-align:left;transition:all 0.15s;}
+  .tpl-card:hover{border-color:var(--teal-main);background:var(--teal-ghost);transform:translateY(-1px);}
+  .tpl-icon{font-size:18px;margin-bottom:4px;}
+  .tpl-name{font-size:12px;font-weight:600;color:var(--text-main);margin-bottom:2px;}
+  .tpl-desc{font-size:11px;color:var(--text-hint);}
+  .struct-wrap{padding:0 20px 20px;}
+  .struct-box{background:var(--bg-ref);border-radius:9px;padding:12px 14px;}
+  .struct-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;}
+  .struct-dot{width:6px;height:6px;border-radius:50%;background:var(--teal-main);flex-shrink:0;margin-top:4px;}
+  .struct-code{font-size:11px;color:var(--text-mid);font-family:'Courier New',monospace;}
+  .struct-subdesc{font-size:10px;color:var(--text-hint);}
 
-    /* ── HISTORY PANEL ── */
-    #historyPanel {
-      display:none; background:var(--white); border-bottom:1.5px solid var(--border);
-      padding:14px 24px; flex-shrink:0;
-    }
-    .history-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-bottom:10px; }
-    #historyScroll { display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
-    .history-card {
-      flex-shrink:0; padding:8px 12px; border-radius:8px;
-      border:1.5px solid var(--border); background:#F8F7F4;
-      cursor:pointer; text-align:left; max-width:200px;
-      transition:border-color .15s, background .15s;
-    }
-    .history-card:hover { border-color:var(--green); background:var(--green-lt); }
-    .history-date  { font-size:11px; color:var(--muted); margin-bottom:3px; }
-    .history-prev  { font-size:12px; color:var(--text); line-height:1.4;
-      overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  #right{display:flex;flex-direction:column;background:var(--bg-alt);}
+  #toolbar{background:#fff;border-bottom:1.5px solid var(--border);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;}
+  .tab-group{display:flex;gap:4px;background:var(--bg-ref);padding:3px;border-radius:8px;}
+  .tab-btn{padding:6px 14px;border-radius:6px;border:none;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.15s;background:transparent;color:var(--text-hint);}
+  .tab-btn.active{background:#fff;color:var(--teal-mid);box-shadow:0 1px 4px rgba(0,0,0,0.1);}
+  .toolbar-meta{display:flex;gap:12px;align-items:center;font-size:12px;color:var(--text-hint);}
+  #quality-badge{font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;display:none;}
 
-    /* ── MAIN GRID ── */
-    #main {
-      flex:1; display:grid; grid-template-columns:420px 1fr; min-height:0; overflow:hidden;
-    }
+  #editor-area{flex:1;padding:20px;}
+  .editor-rel{position:relative;}
+  #md-editor{width:100%;height:calc(100vh - 258px);min-height:400px;padding:16px 18px;border-radius:10px;border:1.5px solid var(--editor-border);font-family:'Courier New',Courier,monospace;font-size:13.5px;line-height:1.75;resize:none;outline:none;background:var(--editor-bg);color:var(--editor-text);caret-color:var(--teal-main);transition:border-color 0.2s;}
+  #md-editor:focus{border-color:var(--teal-main);}
+  #preview-area{display:none;height:calc(100vh - 258px);min-height:400px;background:#fff;border-radius:10px;border:1.5px solid var(--border);padding:24px 28px;overflow-y:auto;}
 
-    /* ── LEFT PANEL ── */
-    #left {
-      background:var(--white); border-right:1.5px solid var(--border);
-      display:flex; flex-direction:column; overflow-y:auto;
-    }
+  #export-bar{background:#fff;border-top:1.5px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:8px;}
+  .export-label{font-size:11px;font-weight:700;color:var(--text-hint);text-transform:uppercase;letter-spacing:0.8px;margin-right:4px;}
+  .bar-divider{width:1px;height:24px;background:var(--border-soft);margin:0 4px;}
+  #btn-clear{margin-left:auto;color:var(--red-text)!important;border-color:var(--red-border)!important;display:none;}
+  #btn-clear.visible{display:flex;}
 
-    /* Input section */
-    .section-pad { padding:20px 20px 16px; }
-    .input-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
-    .label-sm { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; }
-    .char-count { font-size:11px; color:var(--muted-lt); }
+  .spinner{width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0;display:inline-block;}
 
-    #userInput {
-      width:100%; min-height:160px; padding:12px 14px;
-      border-radius:9px; border:1.5px solid var(--border);
-      font-family:system-ui,sans-serif; font-size:13.5px; line-height:1.65;
-      resize:vertical; outline:none; background:#FAFAF8; color:var(--text);
-      transition:border-color .2s;
-    }
-    #userInput:focus { border-color:var(--green); }
-    #userInput::placeholder { color:var(--muted); }
-    .hint { font-size:11px; color:var(--muted-lt); margin-top:5px; }
+  .md-h1{font-size:16px;font-weight:700;color:var(--teal-dark);font-family:Georgia,serif;letter-spacing:-0.3px;margin:0;}
+  .md-rule{height:2px;background:linear-gradient(90deg,#1D9E75 0%,transparent 100%);margin-top:5px;border-radius:2px;}
+  .md-h2{font-size:14px;font-weight:600;color:var(--teal-mid);margin:14px 0 5px;font-family:Georgia,serif;}
+  .md-h3{font-size:13px;font-weight:600;color:var(--teal-main);margin:10px 0 3px;}
+  .md-ul{padding-left:22px;margin:6px 0 12px;list-style:none;}
+  .md-li{display:flex;gap:8px;margin-bottom:5px;font-size:14px;color:var(--text-mid);line-height:1.6;}
+  .md-li-bullet{color:var(--teal-main);font-weight:700;margin-top:1px;flex-shrink:0;}
+  .md-p{font-size:14px;color:var(--text-mid);margin:3px 0;line-height:1.65;}
+  .md-bq{border-left:3px solid var(--teal-main);padding-left:14px;margin:8px 0;color:var(--text-muted);font-style:italic;font-size:13px;}
+  .md-gap{height:4px;}
+  .md-empty{display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:10px;color:var(--text-faint);}
+  .md-empty-icon{font-size:40px;}
+  .md-empty-title{font-size:14px;font-weight:500;color:var(--text-hint);}
+  .md-empty-sub{font-size:12px;color:var(--text-faint);}
 
-    /* Buttons */
-    .btn-row { padding:0 20px 16px; display:flex; gap:8px; }
-    .btn-primary {
-      flex:1; padding:11px 18px; border-radius:9px; border:none;
-      cursor:pointer; font-size:14px; font-weight:600;
-      background:var(--green-md); color:#fff;
-      display:flex; align-items:center; justify-content:center; gap:7px;
-      transition:background .2s, opacity .2s;
-    }
-    .btn-primary:disabled { background:var(--muted-lt); cursor:not-allowed; opacity:.7; }
-    .btn-primary:not(:disabled):hover { background:var(--green-dk); }
-    .btn-secondary {
-      padding:9px 13px; border-radius:8px;
-      border:1.5px solid var(--border);
-      cursor:pointer; font-size:13px; font-weight:500;
-      background:var(--white); color:var(--text-md);
-      display:flex; align-items:center; gap:6px;
-      transition:all .15s;
-    }
-    .btn-secondary:disabled { cursor:not-allowed; opacity:.5; }
-    .btn-secondary:not(:disabled):hover { border-color:var(--green); background:var(--green-lt); color:var(--green-md); }
-    .btn-danger {
-      padding:9px 13px; border-radius:8px;
-      border:1.5px solid var(--red-lt);
-      cursor:pointer; font-size:13px; font-weight:500;
-      background:var(--white); color:var(--red);
-      display:flex; align-items:center; gap:6px;
-      transition:all .15s; margin-left:auto;
-    }
-    .btn-danger:hover { background:var(--red-bg); }
-
-    /* Offline badge */
-    .offline-banner {
-      margin:0 20px 14px;
-      padding:10px 14px; background:var(--green-bg);
-      border:1px solid var(--green-pal); border-radius:8px;
-      font-size:12px; color:#0A5540;
-      display:flex; gap:8px; align-items:flex-start;
-    }
-
-    /* Divider */
-    .divider { height:1px; background:var(--bg-ref); margin:0 20px; }
-
-    /* Templates */
-    .templates-section { padding:16px 20px; }
-    .template-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
-    .template-card {
-      padding:11px 12px; border-radius:9px;
-      border:1.5px solid var(--border-lt); background:#FAFAF8;
-      cursor:pointer; text-align:left;
-      transition:border-color .15s, background .15s, transform .15s;
-    }
-    .template-card:hover { border-color:var(--green); background:var(--green-lt); transform:translateY(-1px); }
-    .tmpl-icon { font-size:18px; margin-bottom:4px; }
-    .tmpl-name { font-size:12px; font-weight:600; color:var(--text); margin-bottom:2px; }
-    .tmpl-desc { font-size:11px; color:var(--muted); }
-
-    /* Structure reference */
-    .struct-box {
-      margin:0 20px 20px;
-      background:var(--bg-ref); border-radius:9px; padding:12px 14px;
-    }
-    .struct-item { display:flex; align-items:center; gap:8px; margin-bottom:5px; }
-    .struct-dot  { width:6px; height:6px; border-radius:50%; background:var(--green); flex-shrink:0; }
-    .struct-code { font-size:11px; color:var(--text-md); font-family:'Courier New',monospace; }
-    .struct-note { font-size:11px; color:var(--muted); margin-top:6px; }
-
-    /* ── RIGHT PANEL ── */
-    #right { display:flex; flex-direction:column; background:var(--bg-panel); }
-
-    /* Toolbar */
-    #toolbar {
-      background:var(--white); border-bottom:1.5px solid var(--border);
-      padding:10px 20px; display:flex; align-items:center; justify-content:space-between;
-      flex-shrink:0;
-    }
-    .tab-group { display:flex; gap:4px; background:var(--bg-ref); padding:3px; border-radius:8px; }
-    .tab-btn {
-      padding:6px 14px; border-radius:6px; border:none; cursor:pointer;
-      font-size:13px; font-weight:500; transition:all .15s;
-      background:transparent; color:var(--muted);
-    }
-    .tab-btn.active { background:var(--white); color:var(--green-md); box-shadow:0 1px 4px rgba(0,0,0,.1); }
-    #statsBar { display:flex; gap:14px; font-size:12px; color:var(--muted); }
-    .stat-dot { width:8px; height:8px; border-radius:50%; background:var(--green); display:inline-block; margin-right:4px; }
-
-    /* Editor / Preview */
-    #editorWrap { flex:1; padding:20px; min-height:0; position:relative; }
-
-    #mdEditor {
-      width:100%; height:calc(100vh - 280px); min-height:400px;
-      padding:16px 18px; border-radius:10px;
-      border:1.5px solid var(--teal-brdr);
-      font-family:'Courier New',Courier,monospace;
-      font-size:13.5px; line-height:1.75; resize:none; outline:none;
-      background:var(--editor-bg); color:var(--teal-text);
-      caret-color:var(--green); transition:border-color .2s;
-    }
-    #mdEditor:focus  { border-color:var(--green); }
-    #mdEditor::placeholder { color:#3a5e58; }
-
-    #generatingBadge {
-      display:none; position:absolute; top:34px; right:34px;
-      background:var(--green); color:#fff;
-      font-size:11px; padding:4px 10px; border-radius:6px; font-weight:600;
-      animation:pulse 1s ease infinite;
-    }
-
-    #previewPane {
-      display:none;
-      background:var(--white); border-radius:10px; border:1.5px solid var(--border);
-      padding:24px 28px; height:calc(100vh - 280px); min-height:400px;
-      overflow-y:auto;
-    }
-
-    /* Preview rendered Markdown */
-    .md-h1 { font-size:17px; font-weight:700; color:var(--green-dk); font-family:Georgia,serif; letter-spacing:-.3px; margin:0; }
-    .md-h1-wrap { margin-top:24px; margin-bottom:10px; }
-    .md-h1-wrap:first-child { margin-top:0; }
-    .md-h1-line { height:2px; background:linear-gradient(90deg,var(--green) 0%,transparent 100%); margin-top:6px; border-radius:2px; }
-    .md-h2 { font-size:15px; font-weight:600; color:var(--green-md); margin:16px 0 6px; font-family:Georgia,serif; }
-    .md-h3 { font-size:14px; font-weight:600; color:var(--green); margin:12px 0 4px; }
-    .md-ul { padding-left:22px; margin:6px 0 12px; list-style:none; }
-    .md-li { display:flex; gap:8px; margin-bottom:5px; font-size:14px; color:var(--text-md); line-height:1.6; }
-    .md-li-bullet { color:var(--green); font-weight:700; margin-top:1px; flex-shrink:0; }
-    .md-p  { font-size:14px; color:var(--text-md); margin:4px 0; line-height:1.65; }
-    .md-bq { border-left:3px solid var(--green); padding-left:14px; margin:8px 0; color:var(--text-lt); font-style:italic; font-size:13px; }
-    .md-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:10px; color:var(--muted-lt); }
-
-    /* Export bar */
-    #exportBar {
-      background:var(--white); border-top:1.5px solid var(--border);
-      padding:12px 20px; display:flex; align-items:center; gap:8px; flex-shrink:0;
-    }
-    .export-label { font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.8px; margin-right:4px; }
-    .sep { width:1px; height:24px; background:var(--border-lt); margin:0 4px; }
-
-    /* Spinner */
-    .spinner {
-      width:14px; height:14px; border-radius:50%; display:inline-block; flex-shrink:0;
-      border:2px solid rgba(255,255,255,.2); border-top-color:#fff;
-      animation:spin .7s linear infinite;
-    }
-    .spinner.dark { border-color:rgba(15,110,86,.2); border-top-color:var(--green-md); }
-  </style>
+  @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:none;}}
+  ::-webkit-scrollbar{width:6px;height:6px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  ::-webkit-scrollbar-thumb:hover{background:var(--text-faint);}
+  @media(max-width:800px){#main{grid-template-columns:1fr;}#left{max-height:60vh;}}
+</style>
 </head>
 <body>
 
-<!-- Toast -->
 <div id="toast"></div>
 
-<!-- HEADER -->
 <header>
   <div class="logo">
     <div class="logo-icon">🔮</div>
     <div>
-      <div class="logo-title">PromptForge</div>
+      <div class="logo-name">PromptForge</div>
       <div class="logo-sub">Generador de Prompts en Markdown</div>
     </div>
   </div>
   <div class="header-right">
-    <button id="historyToggle" onclick="toggleHistory()">🕐 Historial (<span id="histCount">0</span>)</button>
-    <div class="badge-local"><div class="badge-dot"></div> 100% Local</div>
+    <button class="btn-history" id="btn-history" onclick="toggleHistory()">🕐 Historial (<span id="hist-count">0</span>)</button>
+    <span class="badge-local">⚡ 100% Local · Sin API</span>
   </div>
 </header>
 
-<!-- HISTORY PANEL -->
-<div id="historyPanel">
+<div id="history-panel">
   <div class="history-label">Prompts anteriores</div>
-  <div id="historyScroll"></div>
+  <div class="history-scroll" id="history-scroll"></div>
 </div>
 
-<!-- MAIN -->
 <div id="main">
-
-  <!-- LEFT -->
   <div id="left">
 
-    <!-- Input -->
-    <div class="section-pad">
+    <div class="input-wrap">
       <div class="input-header">
-        <span class="label-sm">Descripción libre</span>
-        <span class="char-count" id="charCount">0 caracteres</span>
+        <span class="section-label">Descripción libre</span>
+        <span id="char-count">0 caracteres</span>
       </div>
-      <textarea id="userInput"
-        placeholder="Describe en lenguaje natural el comportamiento deseado de tu asistente IA&#10;&#10;Ejemplo: Quiero un asistente experto en bibliometría que analice referencias APA 7, detecte DOI y exporte resultados a Excel..."
-        oninput="onInputChange()"
-        onkeydown="handleKey(event)"
-      ></textarea>
-      <div class="hint">Ctrl+Enter para generar · Sin conexión requerida</div>
+      <textarea id="user-input" rows="9"
+        placeholder="Describe qué debe hacer tu asistente IA. Sé específico:
+
+• ¿Qué datos maneja? (columnas, formatos, archivos)
+• ¿Qué validaciones o procesos debe hacer?
+• ¿Cuál es el resultado esperado?
+• ¿Cuál es el contexto institucional?
+
+El motor local extraerá tus términos exactos."></textarea>
+      <div class="input-hint">
+        <span>Ctrl+Enter para generar</span>
+        <span class="warn-short" id="warn-short">⚠ Más detalle = mejor prompt</span>
+      </div>
     </div>
 
-    <!-- Actions -->
     <div class="btn-row">
-      <button class="btn-primary" id="btnGenerate" onclick="generate()" disabled>
-        ⚡ Generar Prompt
-      </button>
-      <button class="btn-secondary" id="btnOptimize" onclick="optimize()" disabled title="Enriquecer el prompt con secciones adicionales">
-        ✨ Optimizar
-      </button>
+      <button class="btn-primary" id="btn-generate" onclick="generate()" disabled>⚡ Generar Prompt</button>
+      <button class="btn-secondary" id="btn-optimize" onclick="optimize()" disabled>✨ Refinar</button>
     </div>
 
-    <!-- Error -->
-    <div id="errorBox" style="display:none;margin:0 20px 14px;padding:10px 14px;background:var(--red-bg);border:1px solid var(--red-lt);border-radius:8px;font-size:13px;color:var(--red);"></div>
-
-    <!-- Offline banner -->
-    <div class="offline-banner">
-      <span style="font-size:14px">🔒</span>
-      <span>Modo <strong>100% local</strong>. No se envían datos a servidores externos. No requiere API Key ni conexión a internet.</span>
+    <div class="info-box">
+      <strong>Motor de extracción local activo</strong>
+      Detecta columnas, formatos, instituciones, tecnologías y criterios específicos de tu texto para construir un prompt preciso — sin internet ni costo.
     </div>
 
     <div class="divider"></div>
 
-    <!-- Templates -->
-    <div class="templates-section">
-      <div class="label-sm" style="margin-bottom:12px">Plantillas rápidas</div>
-      <div class="template-grid" id="templateGrid"></div>
+    <div class="templates-wrap">
+      <span class="section-label">Plantillas de ejemplo</span>
+      <div class="templates-grid" id="templates-grid"></div>
     </div>
 
-    <!-- Structure -->
-    <div class="struct-box">
-      <div class="label-sm" style="margin-bottom:8px">Estructura generada</div>
-      <div id="structList"></div>
-      <div class="struct-note">+ secciones adicionales según el contexto</div>
+    <div class="struct-wrap">
+      <div class="struct-box">
+        <div class="section-label" style="margin-bottom:8px">Secciones generadas</div>
+        <div id="struct-list"></div>
+      </div>
     </div>
 
-  </div><!-- /left -->
+  </div>
 
-  <!-- RIGHT -->
   <div id="right">
-
-    <!-- Toolbar -->
     <div id="toolbar">
       <div class="tab-group">
         <button class="tab-btn active" id="tab-editor"  onclick="switchTab('editor')">✏️ Editor</button>
         <button class="tab-btn"        id="tab-preview" onclick="switchTab('preview')">👁 Vista Previa</button>
       </div>
-      <div id="statsBar" style="display:none">
-        <span><span class="stat-dot"></span><span id="statSections">0</span> secciones</span>
-        <span id="statWords">0</span> palabras
-        <span id="statChars">0</span> chars
+      <div class="toolbar-meta">
+        <span id="quality-badge"></span>
+        <span id="meta-sections" style="display:none"></span>
+        <span id="meta-words"    style="display:none"></span>
       </div>
     </div>
 
-    <!-- Editor wrap -->
-    <div id="editorWrap">
-      <textarea id="mdEditor"
-        placeholder="El prompt Markdown aparecerá aquí.&#10;&#10;Escribe una descripción en el panel izquierdo y haz clic en ⚡ Generar Prompt&#10;&#10;También puedes escribir directamente aquí para editar manualmente."
-        oninput="onMdChange()"
-        spellcheck="false"
-      ></textarea>
-      <div id="generatingBadge">Generando…</div>
+    <div id="editor-area">
+      <div class="editor-rel">
+        <textarea id="md-editor" spellcheck="false"
+          placeholder="El prompt Markdown aparecerá aquí.
 
-      <!-- Preview pane (inside same wrap so height matches) -->
-      <div id="previewPane">
-        <div class="md-empty" id="emptyState">
-          <div style="font-size:40px">📄</div>
-          <p style="font-size:14px;font-weight:500;color:var(--muted)">Sin contenido para previsualizar</p>
-          <p style="font-size:12px;color:var(--muted-lt)">Genera un prompt primero</p>
-        </div>
-        <div id="previewContent"></div>
+Escribe tu solicitud en el panel izquierdo con el mayor detalle posible y haz clic en ⚡ Generar Prompt.
+
+A más detalle → mayor precisión. El motor usa tus palabras exactas."></textarea>
+        <div id="preview-area"><div class="md-empty"><div class="md-empty-icon">📄</div><div class="md-empty-title">Sin contenido para previsualizar</div><div class="md-empty-sub">Genera un prompt primero</div></div></div>
       </div>
     </div>
 
-    <!-- Export bar -->
-    <div id="exportBar">
+    <div id="export-bar">
       <span class="export-label">Exportar:</span>
-      <button class="btn-secondary" id="btnMd"  onclick="downloadFile('md','text/markdown')"  disabled>⬇ .md</button>
-      <button class="btn-secondary" id="btnTxt" onclick="downloadFile('txt','text/plain')"    disabled>⬇ .txt</button>
-      <button class="btn-secondary" id="btnPdf" onclick="printPDF()"                          disabled>🖨 PDF</button>
-      <div class="sep"></div>
-      <button class="btn-secondary" id="btnCopy" onclick="copyMd()" disabled>📋 Copiar</button>
-      <button class="btn-danger"    id="btnClear" onclick="clearAll()" style="display:none">🗑 Limpiar</button>
+      <button class="btn-secondary" id="btn-md"  onclick="downloadFile('md','text/markdown')" disabled>⬇ .md</button>
+      <button class="btn-secondary" id="btn-txt" onclick="downloadFile('txt','text/plain')"   disabled>⬇ .txt</button>
+      <button class="btn-secondary" id="btn-pdf" onclick="printPDF()"                         disabled>🖨 PDF</button>
+      <div class="bar-divider"></div>
+      <button class="btn-secondary" id="btn-copy" onclick="copyMd()" disabled>📋 Copiar</button>
+      <button class="btn-secondary" id="btn-clear" onclick="clearAll()">🗑 Limpiar</button>
     </div>
-
-  </div><!-- /right -->
-</div><!-- /main -->
+  </div>
+</div>
 
 <script>
-// ═══════════════════════════════════════════════════════
-// DATA
-// ═══════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════
+   DATA
+═══════════════════════════════════════════════════ */
 const TEMPLATES = [
-  { id:1, icon:"📚", name:"Asistente Académico", desc:"Análisis e investigación",
-    input:"Quiero un asistente experto en investigación académica que analice artículos científicos, identifique metodologías, evalúe la calidad de las fuentes y genere resúmenes estructurados siguiendo normas APA 7. Debe distinguir entre fuentes primarias y secundarias y detectar posibles sesgos." },
-  { id:2, icon:"📊", name:"Analista de Datos",   desc:"Estadística y visualización",
-    input:"Necesito un asistente especialista en análisis de datos que interprete datasets en CSV y Excel, detecte patrones estadísticos, proponga visualizaciones adecuadas, genere código en Python o R y explique los resultados de forma accesible a audiencias no técnicas." },
-  { id:3, icon:"🎓", name:"Tutor Educativo",     desc:"Pedagogía adaptativa",
-    input:"Quiero un tutor virtual para estudiantes universitarios que explique conceptos complejos mediante analogías, genere ejercicios prácticos graduados por dificultad, proporcione retroalimentación constructiva y adapte el estilo de enseñanza según el progreso del estudiante." },
-  { id:4, icon:"✍️", name:"Creador de Contenido",desc:"Redacción y marketing",
-    input:"Necesito un asistente creativo de contenido digital que genere ideas originales para redes sociales, artículos de blog y newsletters, adapte el tono según la audiencia objetivo, optimice textos para SEO y mantenga coherencia con la identidad de marca establecida." },
-  { id:5, icon:"💻", name:"Programador Senior",  desc:"Desarrollo y revisión de código",
-    input:"Quiero un asistente experto en desarrollo de software que revise código en Python, JavaScript, TypeScript y SQL, identifique bugs y vulnerabilidades de seguridad, sugiera optimizaciones de rendimiento y explique las mejores prácticas de arquitectura de software." },
-  { id:6, icon:"🔍", name:"Bibliotecólogo",      desc:"Gestión bibliográfica",
-    input:"Necesito un asistente especializado en bibliotecología y gestión de referencias bibliográficas que analice citas en APA, IEEE y Vancouver, detecte DOIs, identifique duplicados, corrija errores de formato y exporte resultados organizados a diferentes gestores bibliográficos." },
-  { id:7, icon:"🔎", name:"Buscador Avanzado",   desc:"Palabras clave y fórmulas",
-    input:"Necesito una herramienta que analice el contenido que le entrego, extraiga las palabras clave y descriptores más relevantes, y luego construya las mejores fórmulas de búsqueda usando operadores booleanos (AND, OR, NOT) y truncamiento para usar en bases de datos académicas como Scopus, Web of Science, PubMed y Google Scholar." },
-  { id:8, icon:"🌐", name:"Interfaz Web HTML",   desc:"Pestañas y componentes",
-    input:"Necesito agregar una nueva pestaña a mi aplicación web en HTML que funcione de forma integrada con las secciones existentes. La pestaña debe tener navegación funcional, estilos coherentes con el diseño actual y el código debe incluir comentarios explicativos para facilitar su mantenimiento." },
+  { name:"Asistente Académico", icon:"📚", desc:"Análisis e investigación", input:"Quiero un asistente experto en investigación académica que analice artículos científicos, identifique metodologías, evalúe la calidad de las fuentes y genere resúmenes estructurados siguiendo normas APA 7. Debe distinguir entre fuentes primarias y secundarias y detectar posibles sesgos." },
+  { name:"Analista de Datos",   icon:"📊", desc:"Estadística y visualización", input:"Necesito un asistente especialista en análisis de datos que interprete datasets en CSV y Excel, detecte patrones estadísticos, proponga visualizaciones adecuadas, genere código en Python o R y explique los resultados de forma accesible a audiencias no técnicas." },
+  { name:"Tutor Educativo",     icon:"🎓", desc:"Pedagogía adaptativa", input:"Quiero un tutor virtual para estudiantes universitarios que explique conceptos complejos mediante analogías, genere ejercicios prácticos graduados por dificultad, proporcione retroalimentación constructiva y adapte el estilo de enseñanza según el progreso del estudiante." },
+  { name:"Creador de Contenido",icon:"✍️", desc:"Redacción y marketing", input:"Necesito un asistente creativo de contenido digital que genere ideas originales para redes sociales, artículos de blog y newsletters, adapte el tono según la audiencia objetivo, optimice textos para SEO y mantenga coherencia con la identidad de marca establecida." },
+  { name:"Programador Senior",  icon:"💻", desc:"Desarrollo y revisión de código", input:"Quiero un asistente experto en desarrollo de software que revise código en Python, JavaScript, TypeScript y SQL, identifique bugs y vulnerabilidades de seguridad, sugiera optimizaciones de rendimiento y explique las mejores prácticas de arquitectura de software." },
+  { name:"Bibliotecólogo",      icon:"🔍", desc:"Gestión bibliográfica", input:"Necesito un asistente especializado en bibliotecología y gestión de referencias bibliográficas que analice citas en APA, IEEE y Vancouver, detecte DOIs, identifique duplicados, corrija errores de formato y exporte resultados organizados a diferentes gestores bibliográficos." },
 ];
 
-const STRUCT_SECTIONS = [
-  "# Rol del Asistente","# Contexto","# Objetivos","# Reglas",
-  "# Restricciones","# Tono y Estilo","# Formato de Salida",
-  "# Ejemplos de Uso","# Limitaciones Conocidas"
+const STRUCT = [
+  ["# Rol del Asistente","Expertise técnica específica"],
+  ["# Contexto y Alcance","Situación y límites reales"],
+  ["# Objetivos","Metas concretas de la tarea"],
+  ["# Instrucciones Paso a Paso","Flujo de trabajo detallado"],
+  ["# Reglas","Normas del dominio"],
+  ["# Restricciones","Limitaciones técnicas/éticas"],
+  ["# Formato de Salida","Estructura del resultado"],
 ];
 
-// ═══════════════════════════════════════════════════════
-// MOTOR LOCAL 100% OFFLINE
-// ═══════════════════════════════════════════════════════
-function detectarRol(d) {
-  const t = d.toLowerCase();
-  // ── Recuperación de información y búsqueda en bases de datos ──
-  if (t.includes("palabras clave")||t.includes("palabra clave")||t.includes("keywords")||
-      t.includes("búsqueda")||t.includes("busqueda")||t.includes("buscador")||
-      t.includes("base de datos")||t.includes("bases de datos")||
-      t.includes("scopus")||t.includes("web of science")||t.includes("wos")||
-      t.includes("pubmed")||t.includes("google scholar")||t.includes("eric")||
-      t.includes("operador")||t.includes("booleano")||t.includes("truncam")||
-      t.includes("recuperaci")||t.includes("fórmula de búsqueda")||t.includes("formula de busqueda")||
-      t.includes("descriptor")||t.includes("tesauro")||t.includes("thesaurus")||
-      t.includes("mesh")||t.includes("ecuación de búsqueda"))
-    return "recuperación de información, búsqueda avanzada en bases de datos académicas y construcción de fórmulas de búsqueda con operadores booleanos";
-  // ── Bibliotecología y referencias ──
-  if (t.includes("bibli")||t.includes("referencia")||t.includes("doi")||t.includes("apa")||t.includes("ieee")||t.includes("vancouver"))
-    return "bibliotecología y gestión bibliográfica";
-  // ── Datos y estadística ──
-  if (t.includes("datos")||t.includes("csv")||t.includes("excel")||t.includes("estadísti")||t.includes("visualizaci")||t.includes("dataset"))
-    return "análisis de datos y visualización estadística";
-  // ── Desarrollo web y software ──
-  if (t.includes("html")||t.includes("css")||t.includes("pestaña")||t.includes("interfaz")||t.includes("frontend")||t.includes("web"))
-    return "desarrollo web y programación de interfaces de usuario";
-  if (t.includes("python")||t.includes("javascript")||t.includes("typescript")||t.includes("program")||t.includes("código")||t.includes("software")||t.includes("bug")||t.includes("sql"))
-    return "desarrollo de software y programación";
-  // ── Investigación académica ──
-  if (t.includes("artículo")||t.includes("investigaci")||t.includes("científi")||t.includes("académi")||t.includes("tesis")||t.includes("metodolog"))
-    return "investigación académica y análisis científico";
-  if (t.includes("marketing")||t.includes("contenido")||t.includes("seo")||t.includes("redes sociales")||t.includes("blog")||t.includes("redacci"))
-    return "creación de contenido y marketing digital";
-  if (t.includes("educat")||t.includes("enseñanza")||t.includes("estudiante")||t.includes("docen")||t.includes("tutor")||t.includes("aprendizaje")||t.includes("pedagog"))
-    return "educación y pedagogía adaptativa";
-  if (t.includes("legal")||t.includes("jurídic")||t.includes("derecho")||t.includes("contrato")||t.includes("normativ"))
-    return "asesoría legal y análisis normativo";
-  if (t.includes("salud")||t.includes("médic")||t.includes("clínic")||t.includes("paciente")||t.includes("diagnósti"))
-    return "ciencias de la salud e información clínica";
-  if (t.includes("finanz")||t.includes("contab")||t.includes("presupuest")||t.includes("inversión")||t.includes("económi"))
-    return "análisis financiero y contabilidad";
-  return "la tarea solicitada por el usuario";
+/* ═══════════════════════════════════════════════════
+   MOTOR DE EXTRACCIÓN LOCAL
+   Analiza el texto del usuario y extrae:
+   - Dominio y rol específico
+   - Entidades concretas mencionadas (columnas, formatos, sistemas)
+   - Criterios y condiciones explícitas
+   - Tipo de output esperado
+═══════════════════════════════════════════════════ */
+
+const DOMINIOS = [
+  { clave:["bibliometr","bibliograf","referencia","doi","isbn","apa","ieee","vancouver","zotero","mendeley","endnote","gestor bibliogr"], rol:"bibliotecología, gestión bibliográfica y análisis de referencias académicas" },
+  { clave:["biblioteca","acervo","catalogaci","fondo documental","colección","préstamo","usuario de biblioteca"], rol:"bibliotecología y gestión de recursos documentales universitarios" },
+  { clave:["excel","planilla","hoja de cálculo","csv","columna","fila","celda","dataset","dataframe"], rol:"análisis y validación de datos en hojas de cálculo" },
+  { clave:["estadístic","regresión","correlación","hipótesis","p-valor","significancia","muestra","distribución"], rol:"análisis estadístico y metodología cuantitativa" },
+  { clave:["python","javascript","typescript","java","c++","sql","html","css","react","node","api","backend","frontend","código","función","clase","bug","debug"], rol:"desarrollo de software y revisión de código" },
+  { clave:["investigaci","artículo científic","paper","tesis","abstract","metodología","marco teórico","revisión sistemática"], rol:"investigación académica y análisis documental" },
+  { clave:["docent","pedagog","aprendi","estudiante","curso","clase","evaluaci","rúbrica","currículo"], rol:"docencia y diseño pedagógico universitario" },
+  { clave:["marketing","seo","contenido","blog","redes sociales","newsletter","copywriting","audiencia","marca"], rol:"marketing digital y creación de contenido" },
+  { clave:["médic","clínic","pacient","diagnóstic","tratamiento","farmac","salud","hospital"], rol:"informática médica y gestión de datos clínicos" },
+  { clave:["legal","jurídic","contrato","norma","ley","regulaci","cumplimiento","compliance"], rol:"análisis jurídico y gestión normativa" },
+  { clave:["contab","finanz","balance","factura","presupuesto","costo","ingreso","egreso"], rol:"gestión financiera y contabilidad" },
+  { clave:["imagen","foto","video","diseño","gráfico","ilustraci","visual","ui","ux"], rol:"diseño visual y experiencia de usuario" },
+];
+
+function detectarDominio(texto) {
+  const t = texto.toLowerCase();
+  let mejorDominio = null;
+  let mejorScore = 0;
+  for (const d of DOMINIOS) {
+    const score = d.clave.filter(k => t.includes(k)).length;
+    if (score > mejorScore) { mejorScore = score; mejorDominio = d; }
+  }
+  return mejorDominio ? mejorDominio.rol : "asistencia especializada en la tarea indicada";
 }
 
-function detectarObjetivos(d) {
-  const t = d.toLowerCase(), o = [];
-  // ── Búsqueda y recuperación de información ──
-  if (t.includes("palabras clave")||t.includes("palabra clave")||t.includes("keywords")||t.includes("descriptor"))
-    o.push("Extraer y jerarquizar palabras clave, descriptores y términos MeSH relevantes a partir del contenido entregado.");
-  if (t.includes("búsqueda")||t.includes("busqueda")||t.includes("fórmula")||t.includes("formula")||t.includes("ecuación")||t.includes("operador")||t.includes("booleano"))
-    o.push("Construir fórmulas de búsqueda avanzadas usando operadores booleanos (AND, OR, NOT), truncamiento (*) y comillas para frases exactas.");
-  if (t.includes("base de datos")||t.includes("bases de datos")||t.includes("scopus")||t.includes("wos")||t.includes("pubmed")||t.includes("google scholar"))
-    o.push("Adaptar las estrategias de búsqueda a las sintaxis específicas de cada base de datos (Scopus, WoS, PubMed, Google Scholar, ERIC).");
-  if (t.includes("buscador")||t.includes("búsqueda efectiva")||t.includes("recuperaci"))
-    o.push("Maximizar la precisión y exhaustividad de los resultados minimizando el ruido documental.");
-  // ── HTML / interfaz web ──
-  if (t.includes("html")||t.includes("pestaña")||t.includes("interfaz")||t.includes("web")||t.includes("frontend"))
-    o.push("Implementar la solución como código HTML funcional, semántico y bien estructurado con comentarios explicativos.");
-  if (t.includes("pestaña")||t.includes("tab")||t.includes("sección"))
-    o.push("Diseñar e integrar la nueva pestaña de forma coherente con la interfaz existente, respetando estilos y navegación.");
-  // ── Objetivos generales ──
-  if (t.includes("analiz")||t.includes("analít"))           o.push("Analizar y procesar la información proporcionada con rigor y profundidad.");
-  if (t.includes("generar")||t.includes("crear")||t.includes("producir")) o.push("Generar contenido estructurado, preciso y de alta calidad.");
-  if (t.includes("resum")||t.includes("sinteti"))            o.push("Resumir y sintetizar información compleja en formatos accesibles.");
-  if (t.includes("detectar")||t.includes("identific")||t.includes("encontrar")) o.push("Identificar patrones, errores o elementos relevantes con precisión.");
-  if (t.includes("exportar")||t.includes("formato")||t.includes("archivo")) o.push("Exportar y estructurar resultados en los formatos solicitados.");
-  if (t.includes("explicar")||t.includes("enseñar")||t.includes("clarificar")) o.push("Explicar conceptos complejos de manera clara y comprensible.");
-  if (t.includes("revisar")||t.includes("corregir")||t.includes("validar")) o.push("Revisar y validar la información para garantizar su exactitud.");
-  if (t.includes("optimizar")||t.includes("mejorar")||t.includes("refinar")) o.push("Optimizar y mejorar los resultados entregados iterativamente.");
-  if (t.includes("recomendar")||t.includes("sugerir")||t.includes("proponer")) o.push("Proporcionar recomendaciones fundamentadas y accionables.");
-  if (o.length === 0) { o.push("Comprender con precisión la intención del usuario.","Ejecutar la tarea con alto nivel técnico y profesional.","Proporcionar resultados estructurados y reutilizables."); }
-  while (o.length < 3) o.push("Asegurar la calidad y consistencia de cada respuesta entregada.");
-  return o.slice(0, 6);
+function extraerColumnas(texto) {
+  // Detecta referencias a columnas específicas: "columna H", "columnas H, I y J", "col. A", etc.
+  const matches = [];
+  const patron1 = /columnas?\s+([A-Z](?:\s*[,y]\s*[A-Z])*)/gi;
+  const patron2 = /columna\s+["']?([A-Za-zÁÉÍÓÚáéíóú][^"'\n,;]{0,30})["']?/gi;
+  const patron3 = /(?:campo|columna|celda)\s+"([^"]+)"/gi;
+  let m;
+  while ((m = patron1.exec(texto)) !== null) matches.push("columna(s) " + m[1].trim());
+  while ((m = patron2.exec(texto)) !== null) {
+    const v = m[1].trim();
+    if (!matches.some(x => x.includes(v))) matches.push("columna \"" + v + "\"");
+  }
+  while ((m = patron3.exec(texto)) !== null) matches.push("campo \"" + m[1] + "\"");
+  return [...new Set(matches)];
 }
 
-function detectarRestrictores(d) {
-  const t = d.toLowerCase();
-  const r = [
-    "No inventar datos, citas o referencias que no hayan sido proporcionados.",
-    "Indicar claramente las limitaciones o incertidumbres presentes.",
-    "Mantener consistencia terminológica a lo largo de toda la interacción.",
+function extraerFormatos(texto) {
+  const t = texto.toLowerCase();
+  const formatos = [];
+  const mapa = {
+    "excel":".xlsx / Excel","planilla":".xlsx / Excel","hoja de cálculo":".xlsx / Excel",
+    ".csv":"CSV","csv":"CSV",".json":"JSON","json":"JSON",
+    ".pdf":"PDF","pdf":"PDF",".docx":"Word (.docx)","word":"Word (.docx)",
+    ".md":"Markdown",".txt":"texto plano (.txt)",
+    "apa":"formato APA 7","ieee":"formato IEEE","vancouver":"formato Vancouver",
+    "doi":"DOI","isbn":"ISBN","url":"URL","enlace":"URL/enlace","link":"URL/enlace",
+  };
+  for (const [k,v] of Object.entries(mapa)) {
+    if (t.includes(k) && !formatos.includes(v)) formatos.push(v);
+  }
+  return formatos;
+}
+
+function extraerSistemas(texto) {
+  const t = texto.toLowerCase();
+  const sistemas = [];
+  const mapa = {
+    "zotero":"Zotero","mendeley":"Mendeley","endnote":"EndNote",
+    "excel":"Microsoft Excel","google sheets":"Google Sheets","google drive":"Google Drive",
+    "python":"Python","r studio":"RStudio","spss":"SPSS","stata":"Stata",
+    "chatgpt":"ChatGPT","gemini":"Gemini","claude":"Claude",
+    "scopus":"Scopus","web of science":"Web of Science","pubmed":"PubMed",
+    "pucv":"sistema PUCV","uc":"sistema UC","u. de chile":"Universidad de Chile",
+  };
+  for (const [k,v] of Object.entries(mapa)) {
+    if (t.includes(k) && !sistemas.includes(v)) sistemas.push(v);
+  }
+  return sistemas;
+}
+
+function extraerCriterios(texto) {
+  // Extrae condiciones del tipo "acceso abierto, suscripción X o de pago"
+  const criterios = [];
+  const t = texto.toLowerCase();
+
+  // Acceso a recursos
+  if (t.includes("acceso abierto") || t.includes("open access")) criterios.push("acceso abierto (open access)");
+  if (t.includes("suscripci")) {
+    // Capturar "suscripción PUCV" o similar
+    const m = texto.match(/suscripci[oó]n\s+([A-ZÁÉÍÓÚ]{2,10})/i);
+    criterios.push(m ? `suscripción ${m[1]}` : "suscripción institucional");
+  }
+  if (t.includes("de pago") || t.includes("pago")) criterios.push("recurso de pago");
+  if (t.includes("gratuito") || t.includes("gratis") || t.includes("libre")) criterios.push("acceso gratuito");
+
+  // Validación
+  if (t.includes("válido") || t.includes("válida") || t.includes("valida")) criterios.push("validez del recurso");
+  if (t.includes("activo") || t.includes("activa") || t.includes("vigente")) criterios.push("estado activo/vigente");
+  if (t.includes("roto") || t.includes("enlace roto") || t.includes("404") || t.includes("no encontrado")) criterios.push("detección de enlaces rotos");
+
+  // Tipos de referencia
+  if (t.includes("obligatori")) criterios.push("referencias obligatorias");
+  if (t.includes("complementari")) criterios.push("referencias complementarias");
+
+  return criterios;
+}
+
+function extraerAcciones(texto) {
+  const t = texto.toLowerCase();
+  const acciones = [];
+  const mapa = [
+    ["valid","Validar la información ingresada"],
+    ["verific","Verificar la exactitud de los datos"],
+    ["revis","Revisar y auditar el contenido"],
+    ["detect","Detectar inconsistencias o errores"],
+    ["analiz","Analizar y procesar la información"],
+    ["export","Exportar los resultados al formato especificado"],
+    ["import","Importar datos desde el archivo fuente"],
+    ["generar","Generar el documento o reporte de salida"],
+    ["clasificar","Clasificar y categorizar los elementos"],
+    ["extraer","Extraer información clave del documento"],
+    ["correg","Corregir errores detectados"],
+    ["organizar","Organizar la información en estructura definida"],
+    ["comparar","Comparar datos entre fuentes"],
+    ["buscar","Buscar y recuperar información específica"],
+    ["actualiz","Actualizar registros con la información correcta"],
+    ["descargar","Descargar y procesar el archivo"],
+    ["convertir","Convertir el formato del documento"],
   ];
-  // ── Búsqueda y recuperación ──
-  if (t.includes("búsqueda")||t.includes("busqueda")||t.includes("palabras clave")||t.includes("base de datos"))
-    r.push("Las fórmulas de búsqueda deben ser verificables y reproducibles en las bases de datos indicadas.");
-  if (t.includes("búsqueda")||t.includes("busqueda")||t.includes("operador")||t.includes("booleano"))
-    r.push("Respetar la sintaxis exacta de operadores booleanos y truncamiento propia de cada base de datos.");
-  // ── HTML / web ──
-  if (t.includes("html")||t.includes("pestaña")||t.includes("web")||t.includes("interfaz"))
-    r.push("El código HTML entregado debe ser funcional, semántico y no romper la estructura ni estilos preexistentes.");
-  if (t.includes("html")||t.includes("pestaña"))
-    r.push("Incluir comentarios en el código que expliquen cada bloque funcional para facilitar su mantenimiento.");
-  // ── Generales contextuales ──
-  if (t.includes("privad")||t.includes("confidencial")||t.includes("datos person"))
-    r.push("Tratar con absoluta confidencialidad los datos personales o sensibles.");
-  if (t.includes("médic")||t.includes("legal")||t.includes("financ"))
-    r.push("Aclarar que las respuestas no reemplazan asesoramiento profesional certificado.");
-  if (t.includes("código")||t.includes("program")||t.includes("software"))
-    r.push("No ejecutar ni sugerir código que pueda comprometer la seguridad del sistema.");
-  return r;
+  for (const [k,v] of mapa) {
+    if (t.includes(k)) acciones.push(v);
+  }
+  return acciones.length ? acciones : ["Procesar la información según las especificaciones indicadas"];
 }
 
-function detectarFormato(d) {
-  const t = d.toLowerCase(), f = [];
-  // ── Búsqueda avanzada ──
-  if (t.includes("palabras clave")||t.includes("palabra clave")||t.includes("keywords")||t.includes("descriptor"))
-    f.push("Lista jerarquizada de palabras clave principales, secundarias y sinónimos en español e inglés.");
-  if (t.includes("búsqueda")||t.includes("busqueda")||t.includes("fórmula")||t.includes("formula")||t.includes("booleano")||t.includes("operador"))
-    f.push("Fórmulas de búsqueda listas para copiar, con operadores booleanos (AND, OR, NOT), truncamiento (*) y frases exactas entre comillas.");
-  if (t.includes("base de datos")||t.includes("bases de datos")||t.includes("scopus")||t.includes("wos")||t.includes("pubmed"))
-    f.push("Tabla comparativa con la fórmula adaptada para cada base de datos (Scopus, WoS, PubMed, Google Scholar).");
-  // ── HTML / interfaz ──
-  if (t.includes("html")||t.includes("pestaña")||t.includes("web")||t.includes("interfaz")||t.includes("frontend"))
-    f.push("Código HTML completo, funcional y listo para integrar, con CSS y JavaScript incluidos en el mismo bloque.");
-  if (t.includes("pestaña")||t.includes("tab"))
-    f.push("Estructura de pestañas (tabs) con navegación funcional entre secciones, integrable en la aplicación existente.");
-  // ── Formatos generales ──
-  if (t.includes("markdown")||t.includes(".md"))               f.push("Documento Markdown con estructura jerárquica.");
-  if (t.includes("excel")||t.includes("csv")||t.includes("tabla")) f.push("Tabla o archivo en formato Excel/CSV cuando aplique.");
-  if (t.includes("json"))                                       f.push("Objeto JSON estructurado cuando corresponda.");
-  if (t.includes("pdf"))                                        f.push("Informe exportable en formato PDF.");
-  if (t.includes("resum")||t.includes("informe"))              f.push("Resumen ejecutivo con puntos clave destacados.");
-  if (t.includes("lista")||t.includes("viñeta"))               f.push("Listas con viñetas para mejorar la legibilidad.");
-  if (f.length === 0) f.push("Respuesta en Markdown con títulos y subtítulos jerárquicos.","Listas ordenadas y no ordenadas según corresponda.","Tablas comparativas cuando mejoren la comprensión del contenido.");
-  return f;
+function extraerContextoInstitucional(texto) {
+  const t = texto.toLowerCase();
+  if (t.includes("universidad") || t.includes("pucv") || t.includes("uc ") || t.includes("académic") || t.includes("facultad")) {
+    const m = texto.match(/(?:universidad|pucv|uc\b)[^\n,;.]{0,40}/i);
+    return m ? m[0].trim() : "entorno universitario académico";
+  }
+  if (t.includes("empresa") || t.includes("organización") || t.includes("institución")) return "entorno organizacional o institucional";
+  if (t.includes("hospital") || t.includes("clínica")) return "entorno de salud clínica";
+  if (t.includes("gobierno") || t.includes("ministerio") || t.includes("municipal")) return "entorno de administración pública";
+  return null;
 }
 
-function generarPromptLocal(desc) {
-  const rol = detectarRol(desc);
-  const objetivos = detectarObjetivos(desc);
-  const restricciones = detectarRestrictores(desc);
-  const formatos = detectarFormato(desc);
-
-  return [
-    `# Rol del Asistente`,``,
-    `- Actúa como un especialista senior en ${rol}.`,
-    `- Posee amplia experiencia práctica y conocimiento técnico actualizado.`,
-    `- Entrega respuestas rigurosas, estructuradas, claras y orientadas a resultados.`,
-    `- Se adapta al nivel de conocimiento del usuario, ajustando el lenguaje y la profundidad.`,``,
-    `# Contexto`,``,
-    `- Solicitud original del usuario: "${desc}"`,
-    `- El objetivo es transformar esta solicitud en instrucciones precisas y reutilizables para cualquier modelo de IA.`,
-    `- La salida debe ser compatible con ChatGPT, Claude, Gemini y otros modelos de lenguaje.`,``,
-    `# Objetivos`,``,
-    ...objetivos.map(o=>`- ${o}`),``,
-    `# Reglas`,``,
-    `- Organiza siempre la información en secciones y subsecciones claras.`,
-    `- Usa listas con viñetas para mejorar la legibilidad cuando sea apropiado.`,
-    `- Incluye ejemplos concretos cuando aporten claridad y valor.`,
-    `- Solicita información adicional si faltan datos críticos para completar la tarea.`,
-    `- Prioriza la precisión sobre la extensión: sé conciso pero completo.`,``,
-    `# Restricciones`,``,
-    ...restricciones.map(r=>`- ${r}`),``,
-    `# Tono y Estilo`,``,
-    `- Profesional, preciso y directo.`,
-    `- Sin ambigüedades ni generalidades vagas.`,
-    `- Orientado a resultados concretos y accionables.`,
-    `- Emplea terminología específica del dominio cuando sea pertinente.`,``,
-    `# Formato de Salida`,``,
-    ...formatos.map(f=>`- ${f}`),``,
-    `# Ejemplos de Uso`,``,
-    `- Proporcionar análisis detallados con evidencia y justificación.`,
-    `- Crear resúmenes ejecutivos estructurados y fáciles de compartir.`,
-    `- Generar recomendaciones específicas con pasos de implementación.`,``,
-    `# Limitaciones Conocidas`,``,
-    `- La calidad del resultado depende directamente de la claridad del contexto entregado.`,
-    `- Si la solicitud es ambigua, deben explicitarse los supuestos utilizados.`,
-    `- El asistente no tiene acceso a información en tiempo real salvo que se le proporcione.`,
-  ].join("\n");
+function extraerOutputEsperado(texto) {
+  const t = texto.toLowerCase();
+  const outputs = [];
+  if (t.includes("excel") || t.includes("planilla") || t.includes(".xlsx")) outputs.push("archivo Excel (.xlsx) con los resultados procesados");
+  if (t.includes("informe") || t.includes("reporte") || t.includes("report")) outputs.push("informe estructurado con hallazgos");
+  if (t.includes("markdown") || t.includes(".md")) outputs.push("documento Markdown estructurado");
+  if (t.includes("pdf")) outputs.push("documento PDF para distribución");
+  if (t.includes("tabla")) outputs.push("tabla de resultados organizada por columnas");
+  if (t.includes("lista")) outputs.push("listado ordenado de elementos procesados");
+  if (t.includes("resumen")) outputs.push("resumen ejecutivo de los resultados");
+  if (t.includes("código") || t.includes("script")) outputs.push("código funcional listo para ejecutar");
+  if (t.includes("aplicaci") || t.includes("app") || t.includes("web")) outputs.push("aplicación web funcional");
+  return outputs.length ? outputs : ["resultado estructurado según el objetivo definido"];
 }
 
-function optimizarPromptLocal(md) {
-  const tieneLimitaciones = md.includes("# Limitaciones");
-  const tieneEjemplos     = md.includes("# Ejemplos");
-  const lineas = [
-    ``,`# Recomendaciones de Uso Avanzado`,``,
-    `- Verifica que cada instrucción sea específica, medible y libre de ambigüedades.`,
-    `- Prioriza la claridad y la estructura por encima de la extensión del prompt.`,
-    `- Incluye siempre ejemplos de entrada y salida esperada cuando sea posible.`,
-    `- Define explícitamente las restricciones y los supuestos de partida.`,
-    `- Solicita aclaraciones al usuario antes de responder si faltan datos críticos.`,
-    `- Itera y refina el prompt basándote en los resultados obtenidos.`,``,
-    `# Criterios de Calidad`,``,
-    `- **Precisión**: Las respuestas deben ser técnicamente correctas y verificables.`,
-    `- **Relevancia**: El contenido debe responder directamente a la solicitud del usuario.`,
-    `- **Completitud**: Cubrir todos los aspectos relevantes sin omisiones importantes.`,
-    `- **Consistencia**: Mantener el mismo estilo, tono y terminología a lo largo de la respuesta.`,
-    `- **Utilidad**: El resultado debe ser directamente aplicable sin necesitar reformulación.`,
-  ];
-  if (!tieneEjemplos) lineas.push(
-    ``,`# Ejemplos de Interacción Esperada`,``,
-    `- **Usuario proporciona**: Contexto claro con datos específicos.`,
-    `- **Asistente entrega**: Respuesta estructurada, precisa y con los formatos solicitados.`,
-    `- **En caso de ambigüedad**: El asistente formula preguntas aclaratorias antes de proceder.`,
-  );
-  if (!tieneLimitaciones) lineas.push(
-    ``,`# Limitaciones Conocidas`,``,
-    `- Sin acceso a internet ni datos en tiempo real salvo los proporcionados.`,
-    `- El conocimiento tiene una fecha de corte según el modelo utilizado.`,
-    `- No puede ejecutar código real en producción, solo simularlo o sugerirlo.`,
-  );
-  return md + lineas.join("\n");
+/* ═══════════════════════════════════════════════════
+   GENERADOR PRINCIPAL
+═══════════════════════════════════════════════════ */
+function generarPromptLocal(descripcion) {
+  const rol       = detectarDominio(descripcion);
+  const columnas  = extraerColumnas(descripcion);
+  const formatos  = extraerFormatos(descripcion);
+  const sistemas  = extraerSistemas(descripcion);
+  const criterios = extraerCriterios(descripcion);
+  const acciones  = extraerAcciones(descripcion);
+  const ctx       = extraerContextoInstitucional(descripcion);
+  const outputs   = extraerOutputEsperado(descripcion);
+
+  // Construir sección Rol
+  const rolLines = [
+    `- Actúa como especialista en ${rol}.`,
+    columnas.length ? `- Tienes experiencia trabajando con estructuras de datos tabulares, incluyendo la gestión de ${columnas.join(", ")}.` : `- Tienes experiencia técnica profunda en el procesamiento y validación de información estructurada.`,
+    sistemas.length ? `- Dominas el uso de: ${sistemas.join(", ")}.` : `- Aplicas las mejores prácticas del dominio con rigor técnico.`,
+    ctx ? `- Conoces las particularidades del trabajo en ${ctx}.` : null,
+  ].filter(Boolean);
+
+  // Construir sección Contexto
+  const ctxLines = [
+    `- Solicitud original: "${descripcion.trim()}"`,
+    ctx ? `- Contexto institucional: ${ctx}.` : null,
+    formatos.length ? `- Formatos involucrados: ${formatos.join(", ")}.` : null,
+    columnas.length ? `- Datos a procesar: ${columnas.join(", ")}.` : null,
+    criterios.length ? `- Criterios clave: ${criterios.join(", ")}.` : null,
+  ].filter(Boolean);
+
+  // Construir sección Objetivos
+  const objLines = acciones.slice(0, 5).map(a => `- ${a}.`);
+  if (outputs.length) objLines.push(`- Producir como resultado: ${outputs.join("; ")}.`);
+
+  // Instrucciones paso a paso basadas en lo detectado
+  const pasos = construirPasos(descripcion, columnas, criterios, formatos, outputs);
+
+  // Reglas específicas al dominio
+  const reglas = construirReglas(descripcion, columnas, criterios, formatos);
+
+  // Restricciones
+  const restricciones = construirRestricciones(descripcion, criterios);
+
+  // Formato de salida
+  const formatoSalida = outputs.map(o => `- ${o.charAt(0).toUpperCase() + o.slice(1)}.`);
+  if (columnas.length) formatoSalida.push(`- Preservar la estructura de columnas originales: ${columnas.join(", ")}.`);
+  if (criterios.length) formatoSalida.push(`- Incluir columna de estado por cada criterio evaluado: ${criterios.join(", ")}.`);
+
+  // Armar el Markdown final
+  let md = "";
+  md += `# Rol del Asistente\n`;
+  md += rolLines.join("\n") + "\n\n";
+
+  md += `# Contexto y Alcance\n`;
+  md += ctxLines.join("\n") + "\n\n";
+
+  md += `# Objetivos\n`;
+  md += objLines.join("\n") + "\n\n";
+
+  md += `# Instrucciones Paso a Paso\n`;
+  md += pasos.join("\n") + "\n\n";
+
+  md += `# Reglas\n`;
+  md += reglas.join("\n") + "\n\n";
+
+  md += `# Restricciones\n`;
+  md += restricciones.join("\n") + "\n\n";
+
+  md += `# Formato de Salida\n`;
+  md += formatoSalida.join("\n");
+
+  if (criterios.length) {
+    md += `\n\n# Criterios de Validación\n`;
+    criterios.forEach(c => { md += `- ${c.charAt(0).toUpperCase() + c.slice(1)}: verificar que el recurso cumple esta condición antes de marcarlo como válido.\n`; });
+  }
+
+  return md;
 }
 
-// ═══════════════════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════════════════
+function construirPasos(desc, columnas, criterios, formatos, outputs) {
+  const t = desc.toLowerCase();
+  const pasos = [];
+  let n = 1;
+
+  if (t.includes("excel") || t.includes("planilla") || t.includes("csv")) {
+    pasos.push(`- Paso ${n++}: Cargar el archivo fuente (${formatos.filter(f=>f.includes("Excel")||f.includes("CSV")).join(" / ") || "Excel/CSV"}) y verificar que la estructura de columnas sea la esperada.`);
+  } else {
+    pasos.push(`- Paso ${n++}: Recibir y verificar que la información de entrada está completa y en el formato correcto.`);
+  }
+
+  if (columnas.length) {
+    pasos.push(`- Paso ${n++}: Identificar y aislar las columnas a procesar: ${columnas.join(", ")}.`);
+  }
+
+  if (t.includes("enlace") || t.includes("url") || t.includes("link") || t.includes("http")) {
+    pasos.push(`- Paso ${n++}: Para cada enlace/URL encontrado, realizar una solicitud HTTP para verificar que la dirección responde correctamente (código 200).`);
+    if (criterios.length) {
+      pasos.push(`- Paso ${n++}: Clasificar cada enlace según el tipo de acceso detectado: ${criterios.join(" / ")}.`);
+    }
+    pasos.push(`- Paso ${n++}: Registrar el resultado de cada verificación con el estado obtenido (válido, roto, redirigido, acceso restringido).`);
+  }
+
+  if (t.includes("valida") || t.includes("verific")) {
+    pasos.push(`- Paso ${n++}: Comparar cada registro contra los criterios de validación definidos y marcar aquellos que no cumplan los requisitos.`);
+  }
+
+  if (t.includes("obligatori") || t.includes("complementari")) {
+    pasos.push(`- Paso ${n++}: Diferenciar las referencias obligatorias de las complementarias y aplicar la validación correspondiente a cada tipo.`);
+  }
+
+  pasos.push(`- Paso ${n++}: Consolidar todos los resultados y generar el reporte de salida: ${outputs[0] || "documento con los resultados"}.`);
+  pasos.push(`- Paso ${n++}: Reportar cualquier error, inconsistencia o caso sin resolver indicando el motivo específico.`);
+
+  return pasos;
+}
+
+function construirReglas(desc, columnas, criterios, formatos) {
+  const t = desc.toLowerCase();
+  const reglas = [];
+
+  if (columnas.length) {
+    reglas.push(`- Procesar únicamente las columnas especificadas: ${columnas.join(", ")}. No modificar otras columnas del archivo.`);
+  }
+  if (criterios.some(c => c.includes("abierto") || c.includes("pago") || c.includes("suscripci"))) {
+    reglas.push(`- Clasificar cada recurso en una sola categoría de acceso: ${criterios.join(" / ")}. No dejar registros sin clasificar.`);
+  }
+  if (t.includes("enlace") || t.includes("url")) {
+    reglas.push(`- No asumir que un enlace es válido por su apariencia; verificar siempre con una solicitud real al servidor.`);
+    reglas.push(`- Distinguir entre error de enlace (404, 500) y acceso restringido (401, 403) al reportar el estado.`);
+  }
+  if (t.includes("bibliograf") || t.includes("referencia")) {
+    reglas.push(`- Mantener la integridad de cada referencia bibliográfica; no alterar autores, títulos ni años durante el proceso.`);
+  }
+  reglas.push(`- Ante cualquier ambigüedad en los datos, solicitar aclaración antes de proceder con una suposición.`);
+  reglas.push(`- Documentar cada decisión tomada durante el proceso para garantizar trazabilidad.`);
+
+  return reglas;
+}
+
+function construirRestricciones(desc, criterios) {
+  const t = desc.toLowerCase();
+  const res = [];
+
+  res.push(`- No inventar, completar ni inferir datos que no estén explícitamente presentes en el archivo o solicitud.`);
+  res.push(`- No modificar datos originales sin registro del cambio realizado.`);
+
+  if (t.includes("universidad") || t.includes("pucv") || t.includes("académic")) {
+    res.push(`- Respetar las políticas de acceso institucional: no distribuir recursos que requieran suscripción a usuarios sin autorización.`);
+  }
+  if (t.includes("enlace") || t.includes("url")) {
+    res.push(`- No almacenar ni redistribuir el contenido de los recursos verificados, solo registrar su estado de acceso.`);
+  }
+  if (criterios.length) {
+    res.push(`- Los criterios de clasificación (${criterios.join(", ")}) son mutuamente excluyentes; asignar solo uno por registro.`);
+  }
+
+  return res;
+}
+
+/* ═══════════════════════════════════════════════════
+   OPTIMIZADOR LOCAL
+═══════════════════════════════════════════════════ */
+function optimizarPromptLocal(markdown) {
+  // Detectar secciones existentes
+  const tienePasos = markdown.includes("# Instrucciones Paso a Paso");
+  const tieneExitos = markdown.includes("# Criterios de Éxito");
+  const tieneEjemplos = markdown.includes("# Ejemplos");
+
+  let extra = "";
+
+  if (!tieneExitos) {
+    extra += `\n# Criterios de Éxito\n`;
+    extra += `- Todos los registros de las columnas especificadas han sido procesados sin excepción.\n`;
+    extra += `- Cada resultado tiene una clasificación explícita y documentada.\n`;
+    extra += `- El reporte de salida es reproducible: ejecutar el proceso con los mismos datos produce el mismo resultado.\n`;
+    extra += `- Los errores o excepciones están identificados, descritos y separados del flujo principal.\n`;
+  }
+
+  if (!tieneEjemplos) {
+    extra += `\n# Ejemplo de Caso\n`;
+    extra += `- Entrada: registro con enlace en columna H, metadatos en I y J.\n`;
+    extra += `- Proceso: verificar enlace → clasificar acceso → registrar estado.\n`;
+    extra += `- Salida esperada: fila actualizada con columna de estado = "acceso abierto" / "suscripción" / "de pago" / "enlace roto".\n`;
+  }
+
+  if (!tienePasos) {
+    extra += `\n# Casos Especiales\n`;
+    extra += `- Enlace redirigido (301/302): seguir la redirección y clasificar el destino final.\n`;
+    extra += `- Enlace con login requerido: clasificar como "acceso restringido" e indicar institución si es posible.\n`;
+    extra += `- Registro sin enlace: marcar como "sin URL" y no intentar validación.\n`;
+    extra += `- Enlace con timeout: reintentar una vez; si falla, marcar como "no disponible".\n`;
+  }
+
+  return markdown + extra;
+}
+
+/* ═══════════════════════════════════════════════════
+   ESTADO Y CONTROL
+═══════════════════════════════════════════════════ */
 let history = [];
 let currentTab = "editor";
-let generating = false;
-let optimizing = false;
 
-// ═══════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════
 (function init() {
-  // Render templates
-  const grid = document.getElementById("templateGrid");
-  TEMPLATES.forEach(t => {
-    const btn = document.createElement("button");
-    btn.className = "template-card";
-    btn.innerHTML = `<div class="tmpl-icon">${t.icon}</div><div class="tmpl-name">${t.name}</div><div class="tmpl-desc">${t.desc}</div>`;
-    btn.onclick = () => { document.getElementById("userInput").value = t.input; onInputChange(); };
-    grid.appendChild(btn);
-  });
-
-  // Render structure
-  const sl = document.getElementById("structList");
-  STRUCT_SECTIONS.forEach(s => {
-    sl.innerHTML += `<div class="struct-item"><div class="struct-dot"></div><code class="struct-code">${s}</code></div>`;
-  });
-
-  // Load history
-  try {
-    const raw = localStorage.getItem("pf-history-offline");
-    if (raw) history = JSON.parse(raw);
-    renderHistory();
-  } catch(e) {}
+  renderTemplates();
+  renderStruct();
+  loadHistory();
+  const inp = document.getElementById("user-input");
+  inp.addEventListener("input", onInputChange);
+  inp.addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) generate(); });
+  document.getElementById("md-editor").addEventListener("input", onMarkdownChange);
 })();
 
-// ═══════════════════════════════════════════════════════
-// HISTORY
-// ═══════════════════════════════════════════════════════
-function renderHistory() {
-  const count = history.length;
-  const btn = document.getElementById("historyToggle");
-  document.getElementById("histCount").textContent = count;
-  btn.style.display = count > 0 ? "block" : "none";
-
-  const scroll = document.getElementById("historyScroll");
-  scroll.innerHTML = "";
-  history.slice(0, 12).forEach(e => {
-    const card = document.createElement("button");
-    card.className = "history-card";
-    card.innerHTML = `<div class="history-date">${e.date} ${e.time}</div><div class="history-prev">${escHtml(e.preview)}</div>`;
-    card.onclick = () => {
-      document.getElementById("userInput").value = e.input;
-      setMd(e.md);
-      onInputChange();
-      document.getElementById("historyPanel").style.display = "none";
-    };
-    scroll.appendChild(card);
+function renderTemplates() {
+  const grid = document.getElementById("templates-grid");
+  TEMPLATES.forEach(t => {
+    const btn = document.createElement("button");
+    btn.className = "tpl-card";
+    btn.innerHTML = `<div class="tpl-icon">${t.icon}</div><div class="tpl-name">${t.name}</div><div class="tpl-desc">${t.desc}</div>`;
+    btn.onclick = () => { document.getElementById("user-input").value = t.input; onInputChange(); };
+    grid.appendChild(btn);
   });
 }
 
-function saveHistory(input, md) {
-  const entry = {
-    id: Date.now(),
-    date: new Date().toLocaleDateString("es-CL"),
-    time: new Date().toLocaleTimeString("es-CL", {hour:"2-digit",minute:"2-digit"}),
-    preview: input.slice(0, 80) + (input.length > 80 ? "…" : ""),
-    input, md
-  };
-  history = [entry, ...history].slice(0, 30);
-  try { localStorage.setItem("pf-history-offline", JSON.stringify(history)); } catch(e) {}
-  renderHistory();
+function renderStruct() {
+  const list = document.getElementById("struct-list");
+  STRUCT.forEach(([code, desc]) => {
+    list.innerHTML += `<div class="struct-row"><div class="struct-dot"></div><div><div class="struct-code">${code}</div><div class="struct-subdesc">${desc}</div></div></div>`;
+  });
 }
 
-function toggleHistory() {
-  const p = document.getElementById("historyPanel");
-  p.style.display = p.style.display === "block" ? "none" : "block";
-}
-
-// ═══════════════════════════════════════════════════════
-// ACTIONS
-// ═══════════════════════════════════════════════════════
 function onInputChange() {
-  const v = document.getElementById("userInput").value;
-  document.getElementById("charCount").textContent = v.length + " caracteres";
-  document.getElementById("btnGenerate").disabled = !v.trim() || generating;
+  const val = document.getElementById("user-input").value;
+  const cc  = document.getElementById("char-count");
+  cc.textContent = val.length + " caracteres";
+  cc.classList.toggle("active", val.length > 50);
+  document.getElementById("warn-short").style.display = (val.length > 0 && val.length < 40) ? "inline" : "none";
+  document.getElementById("btn-generate").disabled = !val.trim();
 }
 
-function handleKey(e) {
-  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) generate();
-}
-
-function onMdChange() {
-  updateStats();
+function onMarkdownChange() {
+  updateMeta(); updateQuality(); updateExportButtons();
   if (currentTab === "preview") renderPreview();
 }
 
-async function generate() {
-  if (generating) return;
-  const input = document.getElementById("userInput").value.trim();
-  if (!input) return;
+function generate() {
+  const inp = document.getElementById("user-input").value.trim();
+  if (!inp) return;
 
-  generating = true;
-  document.getElementById("btnGenerate").disabled = true;
-  document.getElementById("btnGenerate").innerHTML = '<span class="spinner"></span> Generando…';
-  document.getElementById("generatingBadge").style.display = "block";
+  const btn = document.getElementById("btn-generate");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Analizando…';
 
-  await delay(400);
-  try {
-    const result = generarPromptLocal(input);
-    setMd(result);
-    saveHistory(input, result);
-    showToast("✅ Prompt generado correctamente");
-  } finally {
-    generating = false;
-    document.getElementById("btnGenerate").innerHTML = "⚡ Generar Prompt";
-    document.getElementById("btnGenerate").disabled = !document.getElementById("userInput").value.trim();
-    document.getElementById("generatingBadge").style.display = "none";
-  }
+  // setTimeout para dejar que el spinner aparezca antes del procesamiento síncrono
+  setTimeout(() => {
+    try {
+      const result = generarPromptLocal(inp);
+      document.getElementById("md-editor").value = result;
+      onMarkdownChange();
+      switchTab("editor");
+      saveHistory(inp, result);
+      showToast("✅ Prompt generado");
+    } catch(e) {
+      showToast("⚠ Error: " + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '⚡ Generar Prompt';
+    }
+  }, 80);
 }
 
-async function optimize() {
-  if (optimizing) return;
-  const md = document.getElementById("mdEditor").value.trim();
+function optimize() {
+  const md = document.getElementById("md-editor").value.trim();
   if (!md) return;
-
-  optimizing = true;
-  document.getElementById("btnOptimize").disabled = true;
-  document.getElementById("btnOptimize").innerHTML = '<span class="spinner dark"></span> Optimizando…';
-
-  await delay(350);
-  try {
-    const result = optimizarPromptLocal(md);
-    setMd(result);
-    showToast("✨ Prompt optimizado exitosamente");
-  } finally {
-    optimizing = false;
-    document.getElementById("btnOptimize").innerHTML = "✨ Optimizar";
-    document.getElementById("btnOptimize").disabled = !document.getElementById("mdEditor").value.trim();
-  }
+  const btn = document.getElementById("btn-optimize");
+  btn.disabled = true;
+  btn.innerHTML = '✨ Refinando…';
+  setTimeout(() => {
+    document.getElementById("md-editor").value = optimizarPromptLocal(md);
+    onMarkdownChange();
+    showToast("✨ Prompt refinado");
+    btn.disabled = false;
+    btn.innerHTML = '✨ Refinar';
+  }, 80);
 }
 
-function setMd(text) {
-  document.getElementById("mdEditor").value = text;
-  updateStats();
-  updateExportButtons(!!text);
-  if (currentTab === "preview") renderPreview();
-}
-
-function updateStats() {
-  const md = document.getElementById("mdEditor").value;
-  if (!md) { document.getElementById("statsBar").style.display = "none"; return; }
-  const sections = (md.match(/^# /gm) || []).length;
-  const words    = md.split(/\s+/).filter(Boolean).length;
-  document.getElementById("statsBar").style.display = "flex";
-  document.getElementById("statSections").textContent = sections;
-  document.getElementById("statWords").textContent    = words;
-  document.getElementById("statChars").textContent    = md.length;
-}
-
-function updateExportButtons(has) {
-  ["btnMd","btnTxt","btnPdf","btnCopy"].forEach(id => document.getElementById(id).disabled = !has);
-  document.getElementById("btnOptimize").disabled = !has;
-  document.getElementById("btnClear").style.display = has ? "flex" : "none";
-}
-
-function clearAll() {
-  setMd("");
-  document.getElementById("statsBar").style.display = "none";
-}
-
-// ═══════════════════════════════════════════════════════
-// TABS
-// ═══════════════════════════════════════════════════════
 function switchTab(tab) {
   currentTab = tab;
-  const editor  = document.getElementById("mdEditor");
-  const preview = document.getElementById("previewPane");
-  const badge   = document.getElementById("generatingBadge");
-
-  if (tab === "editor") {
-    editor.style.display  = "block";
-    badge.style.display   = generating ? "block" : "none";
-    preview.style.display = "none";
-  } else {
-    editor.style.display  = "none";
-    badge.style.display   = "none";
-    preview.style.display = "block";
-    renderPreview();
-  }
-
+  document.getElementById("md-editor").style.display    = tab === "editor"  ? "block" : "none";
+  document.getElementById("preview-area").style.display = tab === "preview" ? "block" : "none";
   document.getElementById("tab-editor").classList.toggle("active",  tab === "editor");
   document.getElementById("tab-preview").classList.toggle("active", tab === "preview");
+  if (tab === "preview") renderPreview();
 }
 
-// ═══════════════════════════════════════════════════════
-// MARKDOWN RENDERER
-// ═══════════════════════════════════════════════════════
 function renderPreview() {
-  const md = document.getElementById("mdEditor").value;
-  const content = document.getElementById("previewContent");
-  const empty   = document.getElementById("emptyState");
-
-  if (!md.trim()) {
-    content.innerHTML = ""; empty.style.display = "flex"; return;
-  }
-  empty.style.display = "none";
-
+  const md = document.getElementById("md-editor").value;
+  const area = document.getElementById("preview-area");
+  if (!md.trim()) { area.innerHTML = `<div class="md-empty"><div class="md-empty-icon">📄</div><div class="md-empty-title">Sin contenido para previsualizar</div><div class="md-empty-sub">Genera un prompt primero</div></div>`; return; }
   const lines = md.split("\n");
-  let html = "";
-  let inList = false;
-
-  const flushList = () => { if (inList) { html += "</ul>"; inList = false; } };
-  const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-  const bold = s => esc(s).replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");
-
-  lines.forEach(line => {
-    if (line.startsWith("# ")) {
-      flushList();
-      html += `<div class="md-h1-wrap"><h1 class="md-h1">${esc(line.slice(2))}</h1><div class="md-h1-line"></div></div>`;
-    } else if (line.startsWith("## ")) {
-      flushList();
-      html += `<h2 class="md-h2">${esc(line.slice(3))}</h2>`;
-    } else if (line.startsWith("### ")) {
-      flushList();
-      html += `<h3 class="md-h3">${esc(line.slice(4))}</h3>`;
-    } else if (line.startsWith("- ") || line.startsWith("* ")) {
-      if (!inList) { html += `<ul class="md-ul">`; inList = true; }
-      html += `<li class="md-li"><span class="md-li-bullet">▸</span><span>${bold(line.slice(2))}</span></li>`;
-    } else if (line.startsWith("> ")) {
-      flushList();
-      html += `<blockquote class="md-bq">${bold(line.slice(2))}</blockquote>`;
-    } else if (line.trim() === "") {
-      flushList();
-      html += `<div style="height:6px"></div>`;
-    } else {
-      flushList();
-      html += `<p class="md-p">${bold(line)}</p>`;
-    }
+  let html = "", inList = false;
+  const closeList = () => { if (inList) { html += "</ul>"; inList = false; } };
+  lines.forEach((line, i) => {
+    if (line.startsWith("# "))       { closeList(); html += `<div style="${i===0?'':'margin-top:22px'}margin-bottom:8px"><h1 class="md-h1">${esc(line.slice(2))}</h1><div class="md-rule"></div></div>`; }
+    else if (line.startsWith("## ")) { closeList(); html += `<h2 class="md-h2">${esc(line.slice(3))}</h2>`; }
+    else if (line.startsWith("### ")){ closeList(); html += `<h3 class="md-h3">${esc(line.slice(4))}</h3>`; }
+    else if (line.startsWith("- ") || line.startsWith("* ")) { if (!inList) { html += `<ul class="md-ul">`; inList = true; } html += `<li class="md-li"><span class="md-li-bullet">▸</span><span>${esc(line.slice(2))}</span></li>`; }
+    else if (line.trim() === "")     { closeList(); html += `<div class="md-gap"></div>`; }
+    else if (line.startsWith("> "))  { closeList(); html += `<blockquote class="md-bq">${esc(line.slice(2))}</blockquote>`; }
+    else                             { closeList(); html += `<p class="md-p">${esc(line)}</p>`; }
   });
-  flushList();
-  content.innerHTML = html;
+  closeList();
+  area.innerHTML = html;
 }
 
-// ═══════════════════════════════════════════════════════
-// EXPORT
-// ═══════════════════════════════════════════════════════
+function esc(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function updateMeta() {
+  const md = document.getElementById("md-editor").value;
+  const sections = (md.match(/^# /gm)||[]).length;
+  const words = md ? md.split(/\s+/).filter(Boolean).length : 0;
+  const show = !!md.trim();
+  document.getElementById("meta-sections").style.display = show?"inline":"none";
+  document.getElementById("meta-words").style.display    = show?"inline":"none";
+  document.getElementById("meta-sections").textContent   = sections + " secciones";
+  document.getElementById("meta-words").textContent      = words + " palabras";
+}
+
+function updateQuality() {
+  const md = document.getElementById("md-editor").value;
+  const badge = document.getElementById("quality-badge");
+  if (!md.trim()) { badge.style.display="none"; return; }
+  const sections = (md.match(/^# /gm)||[]).length;
+  const bullets  = (md.match(/^- /gm)||[]).length;
+  const hasSteps = md.includes("Paso ");
+  let label, bg, color;
+  if (sections >= 6 && bullets >= 18 && hasSteps) {
+    label="✦ Alta especificidad"; bg="#9FE1CB"; color="#085041";
+  } else if (sections >= 4 && bullets >= 10) {
+    label="◈ Especificidad media"; bg="#D3D1C7"; color="#5F5E5A";
+  } else {
+    label="◇ Agregar más detalle"; bg="#F09595"; color="#A32D2D";
+  }
+  badge.style.cssText=`display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;background:${bg};color:${color}`;
+  badge.textContent=label;
+}
+
+function updateExportButtons() {
+  const has = !!document.getElementById("md-editor").value.trim();
+  ["btn-md","btn-txt","btn-pdf","btn-copy"].forEach(id => document.getElementById(id).disabled=!has);
+  document.getElementById("btn-clear").classList.toggle("visible", has);
+  document.getElementById("btn-optimize").disabled = !has;
+}
+
 function downloadFile(ext, type) {
-  const md = document.getElementById("mdEditor").value;
+  const md = document.getElementById("md-editor").value;
   if (!md) return;
-  const blob = new Blob([md], {type});
+  const blob = new Blob([md],{type});
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement("a");
-  a.href = url; a.download = `prompt-${Date.now()}.${ext}`; a.click();
+  a.href=url; a.download=`prompt-${Date.now()}.${ext}`; a.click();
   URL.revokeObjectURL(url);
   showToast(`📥 Descargando .${ext}…`);
 }
 
-function printPDF() {
-  const md = document.getElementById("mdEditor").value;
+async function copyMd() {
+  const md = document.getElementById("md-editor").value;
   if (!md) return;
-  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Prompt</title>
+  try {
+    await navigator.clipboard.writeText(md);
+    const btn = document.getElementById("btn-copy");
+    btn.innerHTML="✅ ¡Copiado!"; btn.style.color="var(--teal-mid)"; btn.style.borderColor="var(--teal-main)";
+    setTimeout(()=>{btn.innerHTML="📋 Copiar";btn.style.color="";btn.style.borderColor="";},2000);
+  } catch {}
+}
+
+function printPDF() {
+  const md = document.getElementById("md-editor").value;
+  if (!md) return;
+  const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Prompt</title>
   <style>body{font-family:Georgia,serif;max-width:760px;margin:40px auto;padding:0 30px;line-height:1.8;color:#2C2C2A}
-  h1{font-size:20px;color:#085041;border-bottom:2px solid #1D9E75;padding-bottom:6px;margin-top:28px}
+  h1{font-size:18px;color:#085041;border-bottom:2px solid #1D9E75;padding-bottom:6px;margin-top:28px}
   ul{list-style:none;padding-left:16px}li::before{content:"▸ ";color:#1D9E75}
   li{margin-bottom:5px;font-size:14px}p{font-size:14px}
   @media print{body{margin:0;padding:20px}}</style></head>
-  <body><pre style="white-space:pre-wrap;font-family:Georgia,serif;font-size:14px">${md.replace(/</g,"&lt;")}</pre></body></html>`;
-  const w = window.open("","_blank");
-  w.document.write(html); w.document.close(); w.print();
+  <body><pre style="white-space:pre-wrap;font-family:Georgia,serif;font-size:13px;line-height:1.8">${md.replace(/</g,"&lt;")}</pre></body></html>`;
+  const w=window.open("","_blank"); w.document.write(html); w.document.close(); w.print();
 }
 
-async function copyMd() {
-  const md = document.getElementById("mdEditor").value;
-  if (!md) return;
-  const btn = document.getElementById("btnCopy");
-  try {
-    await navigator.clipboard.writeText(md);
-    btn.innerHTML = "✅ ¡Copiado!";
-    btn.style.color = "var(--green-md)";
-    btn.style.borderColor = "var(--green)";
-  } catch {
-    btn.innerHTML = "❌ Error";
-  }
-  setTimeout(() => { btn.innerHTML = "📋 Copiar"; btn.style.color=""; btn.style.borderColor=""; }, 2000);
+function clearAll() {
+  document.getElementById("md-editor").value="";
+  onMarkdownChange(); switchTab("editor");
 }
 
-// ═══════════════════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════════════════
+function loadHistory() {
+  try { const r=localStorage.getItem("pf-history"); if(r){history=JSON.parse(r);renderHistory();} } catch {}
+}
+
+function saveHistory(input, md) {
+  const entry={id:Date.now(),date:new Date().toLocaleDateString("es-CL"),time:new Date().toLocaleTimeString("es-CL",{hour:"2-digit",minute:"2-digit"}),preview:input.slice(0,80)+(input.length>80?"…":""),input,md};
+  history=[entry,...history].slice(0,30);
+  try{localStorage.setItem("pf-history",JSON.stringify(history));}catch{}
+  renderHistory();
+}
+
+function renderHistory() {
+  const btn=document.getElementById("btn-history");
+  document.getElementById("hist-count").textContent=history.length;
+  btn.classList.toggle("visible",history.length>0);
+  const scroll=document.getElementById("history-scroll");
+  scroll.innerHTML="";
+  history.slice(0,12).forEach(e=>{
+    const card=document.createElement("button");
+    card.className="history-card";
+    card.innerHTML=`<div class="history-date">${e.date} ${e.time}</div><div class="history-preview">${esc(e.preview)}</div>`;
+    card.onclick=()=>{document.getElementById("user-input").value=e.input;document.getElementById("md-editor").value=e.md;onInputChange();onMarkdownChange();switchTab("editor");toggleHistory(false);};
+    scroll.appendChild(card);
+  });
+}
+
+function toggleHistory(force) {
+  const panel=document.getElementById("history-panel");
+  const open=force!==undefined?force:!panel.classList.contains("open");
+  panel.classList.toggle("open",open);
+}
+
 function showToast(msg) {
-  const t = document.getElementById("toast");
-  t.textContent = msg; t.style.display = "block";
-  setTimeout(() => { t.style.display = "none"; }, 2500);
+  const t=document.getElementById("toast");
+  t.textContent=msg; t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),2800);
 }
-
-function escHtml(s) {
-  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-}
-
-function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 </script>
 </body>
 </html>
