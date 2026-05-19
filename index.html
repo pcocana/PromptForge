@@ -271,18 +271,19 @@ const DOMINIOS = [
   { clave:["biblioteca","acervo","catalogaci","fondo documental","colección","préstamo","usuario de biblioteca"], rol:"bibliotecología y gestión de recursos documentales universitarios" },
   { clave:["excel","planilla","hoja de cálculo","csv","columna","fila","celda","dataset","dataframe"], rol:"análisis y validación de datos en hojas de cálculo" },
   { clave:["estadístic","regresión","correlación","hipótesis","p-valor","significancia","muestra","distribución"], rol:"análisis estadístico y metodología cuantitativa" },
-  { clave:["python","javascript","typescript","java","c++","sql","html","css","react","node","api","backend","frontend","código","función","clase","bug","debug"], rol:"desarrollo de software y revisión de código" },
+  { clave:["python","javascript","typescript"," java ","c++","sql","html","css","react","node.js","backend","frontend","código fuente","función ","clase ","bug ","debug"], rol:"desarrollo de software y revisión de código" },
   { clave:["investigaci","artículo científic","paper","tesis","abstract","metodología","marco teórico","revisión sistemática"], rol:"investigación académica y análisis documental" },
-  { clave:["docent","pedagog","aprendi","estudiante","curso","clase","evaluaci","rúbrica","currículo"], rol:"docencia y diseño pedagógico universitario" },
-  { clave:["marketing","seo","contenido","blog","redes sociales","newsletter","copywriting","audiencia","marca"], rol:"marketing digital y creación de contenido" },
+  { clave:["docent","pedagog","aprendizaje","estudiante","curso","evaluaci","rúbrica","currículo"], rol:"docencia y diseño pedagógico universitario" },
+  { clave:["marketing","seo ","blog","redes sociales","newsletter","copywriting","audiencia","identidad de marca"], rol:"marketing digital y creación de contenido" },
   { clave:["médic","clínic","pacient","diagnóstic","tratamiento","farmac","salud","hospital"], rol:"informática médica y gestión de datos clínicos" },
-  { clave:["legal","jurídic","contrato","norma","ley","regulaci","cumplimiento","compliance"], rol:"análisis jurídico y gestión normativa" },
+  { clave:["legal","jurídic","contrato"," norma ","ley ","regulaci","compliance"], rol:"análisis jurídico y gestión normativa" },
   { clave:["contab","finanz","balance","factura","presupuesto","costo","ingreso","egreso"], rol:"gestión financiera y contabilidad" },
-  { clave:["imagen","foto","video","diseño","gráfico","ilustraci","visual","ui","ux"], rol:"diseño visual y experiencia de usuario" },
+  { clave:["reescri","reescribe","editor","edici","redact","texto","tono","estilo","voz","narrat","prosa","párrafo","escribir","escritura","humaniz","natural","sonar","sobreelabor","ensayad","crudo","directo","vivid"], rol:"edición y reescritura de textos con estilo natural y auténtico" },
+  { clave:["diseño gráfico","ilustraci","experiencia de usuario","interfaz visual","ux design","ui design"], rol:"diseño visual y experiencia de usuario" },
 ];
 
 function detectarDominio(texto) {
-  const t = texto.toLowerCase();
+  const t = " " + texto.toLowerCase() + " "; // espacios para evitar falsos positivos de subcadenas
   let mejorDominio = null;
   let mejorScore = 0;
   for (const d of DOMINIOS) {
@@ -293,19 +294,30 @@ function detectarDominio(texto) {
 }
 
 function extraerColumnas(texto) {
-  // Detecta referencias a columnas específicas: "columna H", "columnas H, I y J", "col. A", etc.
-  const matches = [];
-  const patron1 = /columnas?\s+([A-Z](?:\s*[,y]\s*[A-Z])*)/gi;
-  const patron2 = /columna\s+["']?([A-Za-zÁÉÍÓÚáéíóú][^"'\n,;]{0,30})["']?/gi;
-  const patron3 = /(?:campo|columna|celda)\s+"([^"]+)"/gi;
-  let m;
-  while ((m = patron1.exec(texto)) !== null) matches.push("columna(s) " + m[1].trim());
-  while ((m = patron2.exec(texto)) !== null) {
-    const v = m[1].trim();
-    if (!matches.some(x => x.includes(v))) matches.push("columna \"" + v + "\"");
+  const cols = new Set();
+
+  // Estrategia: dividir en líneas/oraciones y procesar solo las que
+  // mencionan la palabra "columna". En esos segmentos, extraer ÚNICAMENTE
+  // letras mayúsculas solas (\b[A-Z]\b), que por definición NO son
+  // iniciales de palabras (porque \b requiere que no haya caracter de
+  // palabra adyacente). Así "definidas" → nunca produce "d" y "que" → nunca "q".
+  const segmentos = texto.split(/[\.\n]+/);
+  for (const seg of segmentos) {
+    if (!/columna/i.test(seg)) continue;
+    const letras = seg.match(/\b[A-Z]\b/g);
+    if (letras) letras.forEach(l => cols.add(l));
   }
-  while ((m = patron3.exec(texto)) !== null) matches.push("campo \"" + m[1] + "\"");
-  return [...new Set(matches)];
+
+  // Complemento: listas explícitas tipo "H, I y J" o "H e I" en cualquier
+  // parte del texto (cubre casos donde "columna" aparece en otra línea).
+  const listaPat = /\b([A-Z])\b(?:\s*,\s*\b[A-Z]\b)*\s+[ye]\s+\b([A-Z])\b/g;
+  let m;
+  while ((m = listaPat.exec(texto)) !== null) {
+    const letras = m[0].match(/\b[A-Z]\b/g);
+    if (letras) letras.forEach(l => cols.add(l));
+  }
+
+  return [...cols].sort().map(l => `columna ${l}`);
 }
 
 function extraerFormatos(texto) {
@@ -373,23 +385,27 @@ function extraerAcciones(texto) {
   const t = texto.toLowerCase();
   const acciones = [];
   const mapa = [
-    ["valid","Validar la información ingresada"],
-    ["verific","Verificar la exactitud de los datos"],
-    ["revis","Revisar y auditar el contenido"],
-    ["detect","Detectar inconsistencias o errores"],
-    ["analiz","Analizar y procesar la información"],
-    ["export","Exportar los resultados al formato especificado"],
-    ["import","Importar datos desde el archivo fuente"],
-    ["generar","Generar el documento o reporte de salida"],
+    ["reescri",   "Reescribir el texto conservando el significado pero cambiando el estilo"],
+    ["humaniz",   "Humanizar el texto para que suene auténtico y natural"],
+    ["edita",     "Editar y corregir el contenido manteniendo la voz del autor"],
+    ["simplifica","Simplificar la redacción eliminando complejidad innecesaria"],
+    ["adaptar",   "Adaptar el tono al estilo o audiencia especificados"],
+    ["valid",     "Validar la información ingresada"],
+    ["verific",   "Verificar la exactitud de los datos"],
+    ["revis",     "Revisar y auditar el contenido"],
+    ["detect",    "Detectar inconsistencias o errores"],
+    ["analiz",    "Analizar y procesar la información"],
+    ["export",    "Exportar los resultados al formato especificado"],
+    ["import",    "Importar datos desde el archivo fuente"],
+    ["generar",   "Generar el documento o reporte de salida"],
     ["clasificar","Clasificar y categorizar los elementos"],
-    ["extraer","Extraer información clave del documento"],
-    ["correg","Corregir errores detectados"],
-    ["organizar","Organizar la información en estructura definida"],
-    ["comparar","Comparar datos entre fuentes"],
-    ["buscar","Buscar y recuperar información específica"],
-    ["actualiz","Actualizar registros con la información correcta"],
-    ["descargar","Descargar y procesar el archivo"],
-    ["convertir","Convertir el formato del documento"],
+    ["extraer",   "Extraer información clave del documento"],
+    ["correg",    "Corregir errores detectados"],
+    ["organizar", "Organizar la información en estructura definida"],
+    ["comparar",  "Comparar datos entre fuentes"],
+    ["buscar",    "Buscar y recuperar información específica"],
+    ["actualiz",  "Actualizar registros con la información correcta"],
+    ["convertir", "Convertir el formato del documento"],
   ];
   for (const [k,v] of mapa) {
     if (t.includes(k)) acciones.push(v);
@@ -425,162 +441,259 @@ function extraerOutputEsperado(texto) {
 }
 
 /* ═══════════════════════════════════════════════════
+   DETECTOR DE FAMILIA DE DOMINIO
+   Agrupa dominios en familias para aplicar lógica específica
+═══════════════════════════════════════════════════ */
+function detectarFamilia(texto) {
+  const t = " " + texto.toLowerCase() + " ";
+  if (/reescri|editor|redact|estilo|tono|voz|narrat|prosa|humaniz|sobreelabor|ensayad|crudo|directo|párrafo/.test(t))
+    return "escritura";
+  if (/excel|planilla|csv|columna|fila|celda|dataset|dataframe|validar|verificar enlace|url|doi/.test(t))
+    return "datos";
+  if (/bibliograf|referencia|biblioteca|zotero|mendeley|apa|ieee|vancouver|isbn/.test(t))
+    return "biblioteca";
+  if (/python|javascript|typescript|sql|código|bug|debug|backend|frontend|api/.test(t))
+    return "codigo";
+  if (/investigaci|tesis|paper|abstract|metodología|marco teórico/.test(t))
+    return "investigacion";
+  if (/docent|pedagog|aprendizaje|estudiante|curso|evaluaci/.test(t))
+    return "docencia";
+  if (/marketing|seo |blog|redes sociales|newsletter|copywriting/.test(t))
+    return "marketing";
+  return "general";
+}
+
+/* ═══════════════════════════════════════════════════
    GENERADOR PRINCIPAL
 ═══════════════════════════════════════════════════ */
 function generarPromptLocal(descripcion) {
-  const rol       = detectarDominio(descripcion);
-  const columnas  = extraerColumnas(descripcion);
-  const formatos  = extraerFormatos(descripcion);
-  const sistemas  = extraerSistemas(descripcion);
-  const criterios = extraerCriterios(descripcion);
-  const acciones  = extraerAcciones(descripcion);
-  const ctx       = extraerContextoInstitucional(descripcion);
-  const outputs   = extraerOutputEsperado(descripcion);
+  const rol      = detectarDominio(descripcion);
+  const familia  = detectarFamilia(descripcion);
+  const columnas = extraerColumnas(descripcion);
+  const formatos = extraerFormatos(descripcion);
+  const sistemas = extraerSistemas(descripcion);
+  const criterios= extraerCriterios(descripcion);
+  const acciones = extraerAcciones(descripcion);
+  const ctx      = extraerContextoInstitucional(descripcion);
+  const outputs  = extraerOutputEsperado(descripcion);
 
-  // Construir sección Rol
-  const rolLines = [
-    `- Actúa como especialista en ${rol}.`,
-    columnas.length ? `- Tienes experiencia trabajando con estructuras de datos tabulares, incluyendo la gestión de ${columnas.join(", ")}.` : `- Tienes experiencia técnica profunda en el procesamiento y validación de información estructurada.`,
-    sistemas.length ? `- Dominas el uso de: ${sistemas.join(", ")}.` : `- Aplicas las mejores prácticas del dominio con rigor técnico.`,
-    ctx ? `- Conoces las particularidades del trabajo en ${ctx}.` : null,
-  ].filter(Boolean);
+  const rolLines  = buildRol(familia, rol, columnas, sistemas, ctx, descripcion);
+  const ctxLines  = buildContexto(descripcion, ctx, formatos, columnas, criterios);
+  const objLines  = buildObjetivos(familia, acciones, outputs, descripcion);
+  const pasos     = construirPasos(familia, descripcion, columnas, criterios, formatos, outputs);
+  const reglas    = construirReglas(familia, descripcion, columnas, criterios, formatos);
+  const restriccs = construirRestricciones(familia, descripcion, criterios);
+  const salida    = buildSalida(familia, descripcion, outputs, columnas, criterios);
 
-  // Construir sección Contexto
-  const ctxLines = [
-    `- Solicitud original: "${descripcion.trim()}"`,
-    ctx ? `- Contexto institucional: ${ctx}.` : null,
-    formatos.length ? `- Formatos involucrados: ${formatos.join(", ")}.` : null,
-    columnas.length ? `- Datos a procesar: ${columnas.join(", ")}.` : null,
-    criterios.length ? `- Criterios clave: ${criterios.join(", ")}.` : null,
-  ].filter(Boolean);
-
-  // Construir sección Objetivos
-  const objLines = acciones.slice(0, 5).map(a => `- ${a}.`);
-  if (outputs.length) objLines.push(`- Producir como resultado: ${outputs.join("; ")}.`);
-
-  // Instrucciones paso a paso basadas en lo detectado
-  const pasos = construirPasos(descripcion, columnas, criterios, formatos, outputs);
-
-  // Reglas específicas al dominio
-  const reglas = construirReglas(descripcion, columnas, criterios, formatos);
-
-  // Restricciones
-  const restricciones = construirRestricciones(descripcion, criterios);
-
-  // Formato de salida
-  const formatoSalida = outputs.map(o => `- ${o.charAt(0).toUpperCase() + o.slice(1)}.`);
-  if (columnas.length) formatoSalida.push(`- Preservar la estructura de columnas originales: ${columnas.join(", ")}.`);
-  if (criterios.length) formatoSalida.push(`- Incluir columna de estado por cada criterio evaluado: ${criterios.join(", ")}.`);
-
-  // Armar el Markdown final
   let md = "";
-  md += `# Rol del Asistente\n`;
-  md += rolLines.join("\n") + "\n\n";
+  md += `# Rol del Asistente\n${rolLines.join("\n")}\n\n`;
+  md += `# Contexto y Alcance\n${ctxLines.join("\n")}\n\n`;
+  md += `# Objetivos\n${objLines.join("\n")}\n\n`;
+  md += `# Instrucciones Paso a Paso\n${pasos.join("\n")}\n\n`;
+  md += `# Reglas\n${reglas.join("\n")}\n\n`;
+  md += `# Restricciones\n${restriccs.join("\n")}\n\n`;
+  md += `# Formato de Salida\n${salida.join("\n")}`;
 
-  md += `# Contexto y Alcance\n`;
-  md += ctxLines.join("\n") + "\n\n";
-
-  md += `# Objetivos\n`;
-  md += objLines.join("\n") + "\n\n";
-
-  md += `# Instrucciones Paso a Paso\n`;
-  md += pasos.join("\n") + "\n\n";
-
-  md += `# Reglas\n`;
-  md += reglas.join("\n") + "\n\n";
-
-  md += `# Restricciones\n`;
-  md += restricciones.join("\n") + "\n\n";
-
-  md += `# Formato de Salida\n`;
-  md += formatoSalida.join("\n");
-
-  if (criterios.length) {
+  if (familia === "datos" && criterios.length) {
     md += `\n\n# Criterios de Validación\n`;
-    criterios.forEach(c => { md += `- ${c.charAt(0).toUpperCase() + c.slice(1)}: verificar que el recurso cumple esta condición antes de marcarlo como válido.\n`; });
+    criterios.forEach(c => { md += `- ${c.charAt(0).toUpperCase()+c.slice(1)}: confirmar antes de marcar el registro como válido.\n`; });
   }
-
   return md;
 }
 
-function construirPasos(desc, columnas, criterios, formatos, outputs) {
+/* ── Sección ROL ── */
+function buildRol(familia, rol, columnas, sistemas, ctx, desc) {
+  const t = desc.toLowerCase();
+  const lines = [`- Actúa como especialista en ${rol}.`];
+
+  if (familia === "escritura") {
+    lines.push(`- Tienes un oído entrenado para distinguir textos que suenan auténticos de los que suenan construidos o sobreelaborados.`);
+    lines.push(`- Conoces los recursos estilísticos que hacen que un texto suene vivido: vocabulario concreto, ritmo irregular, elisiones naturales.`);
+    if (t.includes("crudo") || t.includes("directo")) lines.push(`- Sabes cuándo eliminar una frase entera en lugar de suavizarla, priorizando honestidad sobre elegancia.`);
+  } else if (familia === "datos") {
+    lines.push(columnas.length
+      ? `- Tienes experiencia procesando estructuras tabulares, incluyendo ${columnas.join(", ")}.`
+      : `- Tienes experiencia procesando y validando datos estructurados en distintos formatos.`);
+    if (sistemas.length) lines.push(`- Dominas el uso de: ${sistemas.join(", ")}.`);
+  } else if (familia === "biblioteca") {
+    lines.push(`- Conoces en profundidad los estándares de citación (APA, IEEE, Vancouver) y los sistemas de identificación bibliográfica.`);
+    if (sistemas.length) lines.push(`- Tienes experiencia con gestores bibliográficos: ${sistemas.join(", ")}.`);
+  } else if (familia === "codigo") {
+    lines.push(`- Revisas código con foco en legibilidad, seguridad y rendimiento.`);
+    if (sistemas.length) lines.push(`- Trabajas con: ${sistemas.join(", ")}.`);
+  } else {
+    lines.push(sistemas.length
+      ? `- Dominas el uso de: ${sistemas.join(", ")}.`
+      : `- Aplicas criterio experto para tomar decisiones bien fundamentadas en el dominio.`);
+  }
+
+  if (ctx) lines.push(`- Conoces las particularidades del trabajo en ${ctx}.`);
+  return lines;
+}
+
+/* ── Sección CONTEXTO ── */
+function buildContexto(desc, ctx, formatos, columnas, criterios) {
+  const lines = [`- Solicitud original: "${desc.trim()}"`];
+  if (ctx)           lines.push(`- Contexto institucional: ${ctx}.`);
+  if (formatos.length) lines.push(`- Formatos involucrados: ${formatos.join(", ")}.`);
+  if (columnas.length) lines.push(`- Datos a procesar: ${columnas.join(", ")}.`);
+  if (criterios.length) lines.push(`- Criterios clave a aplicar: ${criterios.join(", ")}.`);
+  return lines;
+}
+
+/* ── Sección OBJETIVOS ── */
+function buildObjetivos(familia, acciones, outputs, desc) {
+  const t = desc.toLowerCase();
+  const lines = [];
+
+  if (familia === "escritura") {
+    lines.push(`- Identificar y eliminar todo fragmento que suene sobreelaborado, ensayado o escrito para impresionar.`);
+    lines.push(`- Reescribir el texto conservando el significado central pero con voz más directa y auténtica.`);
+    if (t.includes("crudo") || t.includes("directo")) lines.push(`- Aplicar un tono más crudo y directo, como si quien lo vivió lo estuviera contando sin filtros.`);
+    if (t.includes("vivid") || t.includes("viví") || t.includes("vivió")) lines.push(`- Dar sensación de experiencia real: vocabulario concreto, sin abstracciones innecesarias.`);
+    lines.push(`- Entregar una versión final que no requiera explicación adicional para sonar natural.`);
+  } else {
+    acciones.slice(0, 5).forEach(a => lines.push(`- ${a}.`));
+    if (outputs.length) lines.push(`- Producir como resultado: ${outputs.join("; ")}.`);
+    if (!lines.length) lines.push(`- Completar la tarea con precisión según lo especificado.`);
+  }
+  return lines;
+}
+
+/* ── Sección PASOS ── */
+function construirPasos(familia, desc, columnas, criterios, formatos, outputs) {
   const t = desc.toLowerCase();
   const pasos = [];
   let n = 1;
 
-  if (t.includes("excel") || t.includes("planilla") || t.includes("csv")) {
-    pasos.push(`- Paso ${n++}: Cargar el archivo fuente (${formatos.filter(f=>f.includes("Excel")||f.includes("CSV")).join(" / ") || "Excel/CSV"}) y verificar que la estructura de columnas sea la esperada.`);
-  } else {
-    pasos.push(`- Paso ${n++}: Recibir y verificar que la información de entrada está completa y en el formato correcto.`);
-  }
-
-  if (columnas.length) {
-    pasos.push(`- Paso ${n++}: Identificar y aislar las columnas a procesar: ${columnas.join(", ")}.`);
-  }
-
-  if (t.includes("enlace") || t.includes("url") || t.includes("link") || t.includes("http")) {
-    pasos.push(`- Paso ${n++}: Para cada enlace/URL encontrado, realizar una solicitud HTTP para verificar que la dirección responde correctamente (código 200).`);
-    if (criterios.length) {
-      pasos.push(`- Paso ${n++}: Clasificar cada enlace según el tipo de acceso detectado: ${criterios.join(" / ")}.`);
+  if (familia === "escritura") {
+    pasos.push(`- Paso ${n++}: Leer el texto completo una vez sin modificar nada, identificando el tono general y la intención.`);
+    pasos.push(`- Paso ${n++}: Marcar las frases que suenan ensayadas, sobreelaboradas o escritas para impresionar.`);
+    pasos.push(`- Paso ${n++}: Eliminar o reemplazar esas frases con formulaciones más directas, usando vocabulario cotidiano y concreto.`);
+    if (t.includes("crudo") || t.includes("directo")) {
+      pasos.push(`- Paso ${n++}: Ajustar el ritmo: acortar oraciones largas, romper estructuras simétricas, agregar la imperfección natural del habla real.`);
     }
-    pasos.push(`- Paso ${n++}: Registrar el resultado de cada verificación con el estado obtenido (válido, roto, redirigido, acceso restringido).`);
+    pasos.push(`- Paso ${n++}: Releer el resultado completo para verificar que suena a una persona real, no a un texto elaborado.`);
+    pasos.push(`- Paso ${n++}: Entregar la versión reescrita sin explicaciones adicionales, a menos que se soliciten.`);
+
+  } else if (familia === "datos") {
+    if (t.includes("excel") || t.includes("planilla") || t.includes("csv")) {
+      pasos.push(`- Paso ${n++}: Cargar el archivo fuente (${formatos.filter(f=>f.includes("Excel")||f.includes("CSV")).join(" / ")||"Excel/CSV"}) y verificar la estructura de columnas.`);
+    } else {
+      pasos.push(`- Paso ${n++}: Recibir y verificar que los datos de entrada están completos y en el formato esperado.`);
+    }
+    if (columnas.length) pasos.push(`- Paso ${n++}: Aislar las columnas a procesar: ${columnas.join(", ")}.`);
+    if (t.includes("enlace") || t.includes("url")) {
+      pasos.push(`- Paso ${n++}: Verificar cada URL con una solicitud HTTP real (esperar código 200; registrar cualquier otro código).`);
+      if (criterios.length) pasos.push(`- Paso ${n++}: Clasificar cada enlace: ${criterios.join(" / ")}.`);
+    }
+    pasos.push(`- Paso ${n++}: Consolidar resultados y generar el reporte de salida: ${outputs[0]||"archivo con resultados"}.`);
+    pasos.push(`- Paso ${n++}: Listar registros con errores o sin resolver, indicando el motivo específico de cada uno.`);
+
+  } else if (familia === "biblioteca") {
+    pasos.push(`- Paso ${n++}: Cargar el listado de referencias y verificar el formato de cada entrada.`);
+    pasos.push(`- Paso ${n++}: Validar que cada referencia cumple el estándar de citación indicado (${formatos.filter(f=>/APA|IEEE|Vancouver/.test(f)).join(", ")||"APA/IEEE/Vancouver"}).`);
+    pasos.push(`- Paso ${n++}: Identificar DOIs faltantes o inválidos e intentar recuperarlos.`);
+    pasos.push(`- Paso ${n++}: Detectar duplicados y referencias incompletas.`);
+    pasos.push(`- Paso ${n++}: Exportar el listado corregido al formato de salida solicitado.`);
+
+  } else {
+    pasos.push(`- Paso ${n++}: Comprender completamente la solicitud antes de comenzar.`);
+    pasos.push(`- Paso ${n++}: Ejecutar la tarea principal según las instrucciones especificadas.`);
+    pasos.push(`- Paso ${n++}: Revisar el resultado y corregir cualquier desviación respecto al objetivo.`);
+    pasos.push(`- Paso ${n++}: Entregar el resultado en el formato especificado.`);
   }
-
-  if (t.includes("valida") || t.includes("verific")) {
-    pasos.push(`- Paso ${n++}: Comparar cada registro contra los criterios de validación definidos y marcar aquellos que no cumplan los requisitos.`);
-  }
-
-  if (t.includes("obligatori") || t.includes("complementari")) {
-    pasos.push(`- Paso ${n++}: Diferenciar las referencias obligatorias de las complementarias y aplicar la validación correspondiente a cada tipo.`);
-  }
-
-  pasos.push(`- Paso ${n++}: Consolidar todos los resultados y generar el reporte de salida: ${outputs[0] || "documento con los resultados"}.`);
-  pasos.push(`- Paso ${n++}: Reportar cualquier error, inconsistencia o caso sin resolver indicando el motivo específico.`);
-
   return pasos;
 }
 
-function construirReglas(desc, columnas, criterios, formatos) {
+/* ── Sección REGLAS ── */
+function construirReglas(familia, desc, columnas, criterios, formatos) {
   const t = desc.toLowerCase();
   const reglas = [];
 
-  if (columnas.length) {
-    reglas.push(`- Procesar únicamente las columnas especificadas: ${columnas.join(", ")}. No modificar otras columnas del archivo.`);
-  }
-  if (criterios.some(c => c.includes("abierto") || c.includes("pago") || c.includes("suscripci"))) {
-    reglas.push(`- Clasificar cada recurso en una sola categoría de acceso: ${criterios.join(" / ")}. No dejar registros sin clasificar.`);
-  }
-  if (t.includes("enlace") || t.includes("url")) {
-    reglas.push(`- No asumir que un enlace es válido por su apariencia; verificar siempre con una solicitud real al servidor.`);
-    reglas.push(`- Distinguir entre error de enlace (404, 500) y acceso restringido (401, 403) al reportar el estado.`);
-  }
-  if (t.includes("bibliograf") || t.includes("referencia")) {
-    reglas.push(`- Mantener la integridad de cada referencia bibliográfica; no alterar autores, títulos ni años durante el proceso.`);
-  }
-  reglas.push(`- Ante cualquier ambigüedad en los datos, solicitar aclaración antes de proceder con una suposición.`);
-  reglas.push(`- Documentar cada decisión tomada durante el proceso para garantizar trazabilidad.`);
+  if (familia === "escritura") {
+    reglas.push(`- Conservar siempre el significado original: el objetivo es cambiar el estilo, no el mensaje.`);
+    reglas.push(`- Preferir la eliminación sobre la sustitución cuando una frase no puede simplificarse sin sonar artificial.`);
+    reglas.push(`- No agregar información que no estaba en el texto original.`);
+    reglas.push(`- No "mejorar" el texto en términos de elegancia si eso lo aleja del tono auténtico buscado.`);
+    if (t.includes("crudo") || t.includes("directo")) reglas.push(`- Aceptar la imperfección gramatical cuando contribuye a la autenticidad del texto.`);
 
+  } else if (familia === "datos") {
+    if (columnas.length) reglas.push(`- Procesar únicamente las columnas especificadas: ${columnas.join(", ")}. No modificar las demás.`);
+    if (criterios.some(c => /abierto|pago|suscripci/.test(c))) reglas.push(`- Asignar exactamente una categoría de acceso por registro: ${criterios.join(" / ")}.`);
+    if (t.includes("url") || t.includes("enlace")) {
+      reglas.push(`- No asumir validez por la apariencia de un enlace; verificar siempre con solicitud real.`);
+      reglas.push(`- Distinguir entre enlace roto (4xx/5xx) y acceso restringido (401/403).`);
+    }
+    reglas.push(`- Ante ambigüedad en los datos, registrar el caso como pendiente y documentar la duda.`);
+
+  } else if (familia === "biblioteca") {
+    reglas.push(`- No alterar autores, títulos ni años de ninguna referencia durante la corrección.`);
+    reglas.push(`- Indicar explícitamente qué campo fue corregido y cuál era el valor original.`);
+    reglas.push(`- No eliminar referencias sin antes confirmar que son duplicados exactos.`);
+
+  } else {
+    reglas.push(`- Completar cada paso antes de avanzar al siguiente.`);
+    reglas.push(`- Documentar cualquier supuesto tomado ante información incompleta.`);
+    reglas.push(`- Si falta información crítica, solicitarla antes de continuar.`);
+  }
   return reglas;
 }
 
-function construirRestricciones(desc, criterios) {
+/* ── Sección RESTRICCIONES ── */
+function construirRestricciones(familia, desc, criterios) {
   const t = desc.toLowerCase();
   const res = [];
 
-  res.push(`- No inventar, completar ni inferir datos que no estén explícitamente presentes en el archivo o solicitud.`);
-  res.push(`- No modificar datos originales sin registro del cambio realizado.`);
+  if (familia === "escritura") {
+    res.push(`- No agregar opiniones, valoraciones ni información que no esté en el texto original.`);
+    res.push(`- No corregir errores de hecho: solo intervenir el estilo y el tono.`);
+    res.push(`- No incluir explicaciones sobre los cambios realizados, a menos que se pida expresamente.`);
+    res.push(`- No producir múltiples versiones salvo que el usuario lo solicite explícitamente.`);
 
-  if (t.includes("universidad") || t.includes("pucv") || t.includes("académic")) {
-    res.push(`- Respetar las políticas de acceso institucional: no distribuir recursos que requieran suscripción a usuarios sin autorización.`);
-  }
-  if (t.includes("enlace") || t.includes("url")) {
-    res.push(`- No almacenar ni redistribuir el contenido de los recursos verificados, solo registrar su estado de acceso.`);
-  }
-  if (criterios.length) {
-    res.push(`- Los criterios de clasificación (${criterios.join(", ")}) son mutuamente excluyentes; asignar solo uno por registro.`);
-  }
+  } else if (familia === "datos") {
+    res.push(`- No inventar ni completar datos que no estén presentes en el archivo de origen.`);
+    res.push(`- No sobrescribir el archivo original; trabajar siempre sobre una copia.`);
+    if (t.includes("universidad") || t.includes("pucv")) res.push(`- Respetar las políticas de acceso institucional al clasificar recursos.`);
+    if (criterios.length) res.push(`- Los criterios (${criterios.join(", ")}) son mutuamente excluyentes; cada registro recibe uno solo.`);
 
+  } else if (familia === "biblioteca") {
+    res.push(`- No inventar DOIs ni datos bibliográficos faltantes.`);
+    res.push(`- No cambiar el estilo de citación sin instrucción explícita.`);
+
+  } else {
+    res.push(`- No inventar información que no fue proporcionada.`);
+    res.push(`- Indicar claramente cuando algo queda fuera del alcance de la solicitud.`);
+  }
   return res;
+}
+
+/* ── Sección FORMATO DE SALIDA ── */
+function buildSalida(familia, desc, outputs, columnas, criterios) {
+  const t = desc.toLowerCase();
+  const lines = [];
+
+  if (familia === "escritura") {
+    lines.push(`- Texto reescrito en el mismo idioma del original, sin encabezados ni etiquetas adicionales.`);
+    lines.push(`- Extensión similar a la del texto original, salvo que eliminar fragmentos sea necesario para el tono.`);
+    lines.push(`- Sin comentarios del editor al inicio ni al final, a menos que se soliciten.`);
+
+  } else if (familia === "datos") {
+    if (outputs.length) outputs.forEach(o => lines.push(`- ${o.charAt(0).toUpperCase()+o.slice(1)}.`));
+    else lines.push(`- Archivo con los resultados procesados en el mismo formato de entrada.`);
+    if (columnas.length) lines.push(`- Estructura de columnas originales preservada: ${columnas.join(", ")}.`);
+    if (criterios.length) lines.push(`- Columna de estado añadida con el resultado de cada criterio: ${criterios.join(" / ")}.`);
+
+  } else if (familia === "biblioteca") {
+    lines.push(`- Listado de referencias corregidas en el formato de citación indicado.`);
+    lines.push(`- Columna o anotación indicando qué fue corregido en cada entrada.`);
+    lines.push(`- Listado separado de referencias con errores no resolubles.`);
+
+  } else {
+    if (outputs.length) outputs.forEach(o => lines.push(`- ${o.charAt(0).toUpperCase()+o.slice(1)}.`));
+    else lines.push(`- Resultado claro, estructurado y listo para usar directamente.`);
+  }
+  return lines;
 }
 
 /* ═══════════════════════════════════════════════════
